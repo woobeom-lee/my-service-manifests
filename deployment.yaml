@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-web-deployment
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: test-web
+
+  template:
+    metadata:
+      labels:
+        app: test-web
+
+    spec:
+      containers:
+      - name: test-web-container
+        image: ghcr.io/woobeom-lee/my-service-app:fd7ebff172b387567c42896abd9dcfbe973d670
+        ports:
+        - containerPort: 80
