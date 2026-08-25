@@ -18,6 +18,6 @@ spec:
     spec:
       containers:
       - name: test-web-container
-        image: ghcr.io/woobeom-lee/my-service-app:fd7ebff172b387567c42896abd9dcfbe973d670
+        image: ghcr.io/woobeom-lee/my-service-app:fd7ebff172b387567c42896abd9dcfbe973d670e
         ports:
         - containerPort: 80
