@@ -42,7 +42,7 @@ spec:
         - name: vol-clair-sql
           hostPath:
             # 호스트 볼륨의 기본 경로를 변수화합니다.
-            path: {{ .Values.global.hostPathBase }}/clair/sql/clair2x-vuln-db.sql
+            path: {{ .Values.global.hostPathBase }}/permanent/clair/sql/clair2x-vuln-db.sql
             type: File
 ---
 apiVersion: v1
