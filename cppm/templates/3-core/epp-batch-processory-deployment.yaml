@@ -50,7 +50,7 @@ spec:
  
         # 3. 우리가 만든 '마법의 공통 정찰병(DB/Kafka 대기)' 추가!
         # 4. 기존에 있던 init-link 정찰병은 폴더 권한(chown)을 줘야 하므로 대기 로직 뒤에 이어서 실행되게 둡니다.
-        initContainers:
+      initContainers:
         - name: init-link
           # 5. 이미지 하드코딩 제거 -> values.yaml 변수로 치환!
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

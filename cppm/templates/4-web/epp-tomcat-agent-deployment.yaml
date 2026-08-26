@@ -45,7 +45,7 @@ spec:
             - "cpp-tomcat-agent"
             - "host.docker.internal"
  
-        initContainers:
+      initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent

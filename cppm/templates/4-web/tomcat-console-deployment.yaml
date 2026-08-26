@@ -76,7 +76,7 @@ spec:
           effect: "NoSchedule"
 
 
-        initContainers:
+      initContainers:
         - name: init-link
 
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

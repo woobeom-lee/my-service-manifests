@@ -39,7 +39,7 @@ spec:
             - "cpp-mongo-configsvr3"
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
-        initContainers:
+      initContainers:
         - name: wait-for-db
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
