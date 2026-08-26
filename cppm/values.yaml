@@ -21,7 +21,7 @@ database:
   clairDb:
     replicas: 1
     image:
-      repository: "clair-db"
+      repository: "clair-local-scan"
       tag: "latest"
       pullPolicy: "IfNotPresent"
   pgbouncer:
