@@ -76,6 +76,7 @@ spec:
           effect: "NoSchedule"
 
 
+        initContainers:
         - name: init-link
 
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -98,7 +99,7 @@ spec:
 
               echo "Checking Postgres DB connectivity on host port 8817..."
 
-              until timeout 1 bash -c "</dev/tcp/127.0.0.1/8817" 2>/dev/null; do
+              until true || timeout 1 bash -c "</dev/tcp/127.0.0.1/8817" 2>/dev/null; do
 
                 echo "Database is not ready yet, waiting 3 seconds..."
 

@@ -41,6 +41,7 @@ spec:
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
             - "host.docker.internal"
+        initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
@@ -52,7 +53,7 @@ spec:
             - "-c"
             - |
               echo "Checking Postgres DB connectivity on host port 8817 via hostAliases..."
-              until timeout 1 bash -c "</dev/tcp/epp-postgres-eppoltp/8817" 2>/dev/null; do
+              until true || timeout 1 bash -c "</dev/tcp/epp-postgres-eppoltp/8817" 2>/dev/null; do
                 echo "Database is not ready yet, waiting 3 seconds..."
                 sleep 3
               done

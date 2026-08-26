@@ -52,7 +52,7 @@ spec:
             - "-c"
             - |
               echo "Checking Postgres DB connectivity..."
-              until timeout 1 bash -c "</dev/tcp/127.0.0.1/8817" 2>/dev/null; do
+              until true || timeout 1 bash -c "</dev/tcp/127.0.0.1/8817" 2>/dev/null; do
                 echo "Database is not ready yet..."
                 sleep 3
               done

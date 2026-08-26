@@ -1,0 +1,80 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpp-eureka-gateway
+  namespace: k8s-cppm
+spec:
+  selector:
+    app: epp-eureka-gateway
+  ports:
+    - protocol: TCP
+      port: 8804
+      targetPort: 8804
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpp-lbagent
+  namespace: k8s-cppm
+spec:
+  selector:
+    app: epp-eureka-gateway
+  ports:
+    - protocol: TCP
+      port: 8804
+      targetPort: 8804
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-eureka-gateway
+  namespace: k8s-cppm
+  labels:
+    app: epp-eureka-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epp-eureka-gateway
+  template:
+    metadata:
+      labels:
+        app: epp-eureka-gateway
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      securityContext:
+        runAsUser: 2500
+      containers:
+        - name: epp-eureka-gateway
+          image: "{{ .Values.global.imageRegistry }}/cpp-eureka-gateway:1.0.25.11"
+          imagePullPolicy: IfNotPresent
+          command: ["java", "-Dreactor.netty.http.server.accessLogEnabled=true", "-jar", "/service-eureka-gateway-0.0.1.jar"]
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: EUREKA_SERVER_HOSTNAME
+              value: "127.0.0.1"
+          volumeMounts:
+            - name: vol-cpp
+              mountPath: /opt/ahnlab/cpp
+            - name: vol-permanent
+              mountPath: /permanent
+            - name: vol-tmp
+              mountPath: /tmp
+      volumes:
+        - name: vol-cpp
+          hostPath:
+            path: /home/k8s/cpp_installer/ahnfs/opt/ahnlab/cpp
+            type: DirectoryOrCreate
+        - name: vol-permanent
+          hostPath:
+            path: /home/k8s/cpp_installer/ahnfs/permanent
+            type: DirectoryOrCreate
+        - name: vol-tmp
+          hostPath:
+            path: /home/k8s/cpp_installer/ahnfs/tmp
+            type: DirectoryOrCreate
