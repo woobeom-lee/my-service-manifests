@@ -18,8 +18,6 @@ spec:
       # 지정된 노드(cpp-server)에만 파드가 배포되도록 강제
       nodeSelector:
         kubernetes.io/hostname: "cpp-server"
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: clair-server
           image: "abis.ahnlab.com/cpp/clair-local-scan:latest"

@@ -39,7 +39,6 @@ spec:
             - "cpp-mongo-configsvr3"
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
-      initContainers:
         - name: wait-for-db
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
@@ -56,8 +55,6 @@ spec:
                 sleep 3
               done
               echo "Database is ready! Starting cluster-manager..."
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: epp-cluster-manager
           image: cpp-platform:9-16-25

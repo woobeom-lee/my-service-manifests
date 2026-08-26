@@ -37,8 +37,6 @@ spec:
             - "cpp-redis"
             - "epp-mongo-mongos"
             - "host.docker.internal"
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: epp-cmd
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

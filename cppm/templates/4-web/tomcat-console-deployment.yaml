@@ -75,7 +75,6 @@ spec:
 
           effect: "NoSchedule"
 
-      initContainers:
 
         - name: init-link
 
@@ -205,8 +204,6 @@ spec:
 
               mountPath: /var/host_log
 
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
 
         - name: tomcat-console

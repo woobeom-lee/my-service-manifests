@@ -29,8 +29,6 @@ spec:
         - ip: "10.128.88.28"
           hostnames:
             - "host.docker.internal"
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: epp-cli
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

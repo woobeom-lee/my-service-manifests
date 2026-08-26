@@ -41,7 +41,6 @@ spec:
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
             - "host.docker.internal"
-      initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
@@ -94,8 +93,6 @@ spec:
               subPath: permanent
             - name: vol-host-log
               mountPath: /var/host_log
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: epp-mgr
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

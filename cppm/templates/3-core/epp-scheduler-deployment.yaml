@@ -41,7 +41,6 @@ spec:
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
             - "host.docker.internal"
-      initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
@@ -97,8 +96,6 @@ spec:
               mountPath: /opt/ahnlab/cpp/.epp_storage_path
             - name: epp-storage-path-vol
               mountPath: /opt/.epp_storage_path
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: epp-scheduler
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

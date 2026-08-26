@@ -39,7 +39,6 @@ spec:
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
  
-      initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
@@ -86,8 +85,6 @@ spec:
               mountPath: /home
               subPath: home
  
-      initContainers:
-        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
       containers:
         - name: epp-nginx
           image: docker.io/library/cpp-nginx:1.28.2-1
