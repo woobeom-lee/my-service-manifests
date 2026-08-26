@@ -1,0 +1,182 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-mgr
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-mgr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-mgr
+  template:
+    metadata:
+      labels:
+        app: epp-mgr
+    spec:
+      # 🔥 핵심 해결: hostNetwork를 제거하여 깔끔한 K8s 가상 eth0 IP를 받도록 격리합니다.
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "cpp-server"
+            - "epp-kafka"
+            - "cpp-kafka"
+            - "epp-postgres-eppoltp"
+            - "epp-pgbouncer-eppoltp"
+            - "cpp-pgbouncer-eppoltp"
+            - "epp-redis"
+            - "epp-mongo-mongos"
+            - "epp-mgr"
+            - "cpp-mongo-configsvr1"
+            - "cpp-mongo-configsvr2"
+            - "cpp-mongo-configsvr3"
+            - "cpp-tomcat-auth"
+            - "cpp-tomcat-console"
+            - "host.docker.internal"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh
+              echo "Fixing permissions for MGR mounted paths..."
+              mkdir -p /opt/repo /new /permanent/save /nosql /database /tmp /var/log /home /var/run/postgresql
+              rm -rf /tmp/hsperfdata_* || true
+              echo "/permanent" > /opt/.epp_storage_path
+              echo "/permanent" > /permanent/save/epp_storage_path
+              echo "/permanent" > /opt/ahnlab/cpp/.epp_storage_path
+              chown 2500:2500 /opt/.epp_storage_path /permanent/save/epp_storage_path /opt/ahnlab/cpp/.epp_storage_path || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+          volumeMounts:
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-epp-storage-path
+              mountPath: /opt/.epp_storage_path
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-nosql
+              mountPath: /nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-host-log
+              mountPath: /var/host_log
+      initContainers:
+        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
+      containers:
+        - name: epp-mgr
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-mgr.sh"]
+          securityContext:
+            runAsUser: 2500
+            privileged: true
+          resources:
+            requests:
+              memory: "256Mi"
+            limits:
+              memory: 1024Mi
+          ports:
+            - containerPort: 8801
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-mgr"
+            - name: DOCKER_HOST
+              value: "unix:///var/run/docker.sock"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms768m -Xmx768m"
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-epp-storage-path
+              mountPath: /opt/.epp_storage_path
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-nosql
+              mountPath: /nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-host-log
+              mountPath: /var/host_log
+      volumes:
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-epp-storage-path
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/.epp_storage_path
+            type: FileOrCreate
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}
+            type: Directory
+        - name: vol-nosql
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/nosql
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory

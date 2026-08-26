@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-mongo-configsvr1
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-mongo-configsvr1
+spec:
+  replicas: {{ .Values.database.mongo.configsvr1.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-mongo-configsvr1
+  template:
+    metadata:
+      labels:
+        app: epp-mongo-configsvr1
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: cpp-mongo-configsvr1
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: {{ .Values.global.masterIp | quote }}
+          hostnames:
+            - "host.docker.internal"
+            - "epp-postgres-eppoltp"
+            - "epp-redis"
+            - "epp-mongo-mongos"
+            - "epp-mgr"
+            - "cpp-mongo-configsvr1"
+            - "cpp-mongo-configsvr2"
+            - "cpp-mongo-configsvr3"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              echo "Fixing permissions for ConfigSvr1 mounted paths..."
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+          volumeMounts:
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-host-log
+              mountPath: /var/host_log
+      containers:
+        - name: epp-mongo-configsvr1
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/nosql/cmd/epp-mongo-configsvr1.sh"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "512Mi"
+          ports:
+            - containerPort: 8821
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-mongo-configsvr1"
+            - name: DOCKER_HOST
+              value: "unix:///var/run/docker.sock"
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-host-log
+              mountPath: /var/host_log
+      volumes:
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory

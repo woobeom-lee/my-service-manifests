@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-mongo-shardsvr2
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-mongo-shardsvr2
+spec:
+  replicas: {{ .Values.database.mongo.shardsvr2.replicas }}
+  selector:
+    matchLabels:
+      app: epp-mongo-shardsvr2
+  template:
+    metadata:
+      labels:
+        app: epp-mongo-shardsvr2
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      hostAliases:
+        - ip: {{ .Values.global.masterIp | quote }}
+          hostnames:
+            - "cpp-mongo-configsvr1"
+            - "cpp-mongo-configsvr2"
+            - "cpp-mongo-configsvr3"
+            - "cpp-mongo-shardsvr"
+            - "cpp-mongo-shardsvr1"
+            - "cpp-mongo-shardsvr2"
+            - "cpp-mongo-shardsvr3"
+            - "cpp-mongo-mongos"
+      containers:
+        - name: epp-mongo-shardsvr2
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/nosql/cmd/epp-mongo-shardsvr2.sh"]
+          securityContext:
+            runAsUser: 2500
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+          volumeMounts:
+            - name: vol-nosql
+              mountPath: /nosql
+            - name: vol-tmp
+              mountPath: /tmp
+      volumes:
+        - name: vol-nosql
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}/nosql
+            type: DirectoryOrCreate
+        - name: vol-tmp
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}/tmp
+            type: DirectoryOrCreate

@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpp-eureka-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: epp-eureka-server
+  ports:
+    - protocol: TCP
+      port: 8807
+      targetPort: 8807
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-eureka-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-eureka-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epp-eureka-server
+  template:
+    metadata:
+      labels:
+        app: epp-eureka-server
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      securityContext:
+        runAsUser: 2500
+      containers:
+        - name: epp-eureka-server
+          image: "{{ .Values.global.imageRegistry }}/cpp-eureka-server:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["java", "-jar", "/service-eureka-server-0.0.1.jar"]
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: EUREKA_SERVER_HOSTNAME
+              value: "127.0.0.1"
+          volumeMounts:
+            - name: vol-cpp
+              mountPath: /opt/ahnlab/cpp
+            - name: vol-permanent
+              mountPath: /permanent
+            - name: vol-tmp
+              mountPath: /tmp
+      volumes:
+        - name: vol-cpp
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/opt/ahnlab/cpp
+            type: DirectoryOrCreate
+        - name: vol-permanent
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/permanent
+            type: DirectoryOrCreate
+        - name: vol-tmp
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/tmp
+            type: DirectoryOrCreate

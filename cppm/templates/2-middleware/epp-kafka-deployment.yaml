@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-kafka
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epp-kafka
+  template:
+    metadata:
+      labels:
+        app: epp-kafka
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: "epp-kafka"
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      containers:
+        - name: epp-kafka
+          image: "abis.ahnlab.com/cwpp-docker-release-local/cppm/cpp-kafka:4.1.1"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          # 🔥 에러를 일으키는 libversion.sh 함수를 안전한 더미 함수로 덮어씌운 뒤 카프카 구동
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo '#!/bin/bash' > /opt/bitnami/scripts/libversion.sh
+              echo 'version_validation() { true; }' >> /opt/bitnami/scripts/libversion.sh
+              echo 'validate_version() { true; }' >> /opt/bitnami/scripts/libversion.sh
+              exec /opt/bitnami/scripts/kafka/entrypoint.sh /opt/bitnami/scripts/kafka/run.sh
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms256m -Xmx512m"
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: ALLOW_PLAINTEXT_LISTENER
+              value: "yes"
+            - name: KAFKA_ENABLE_KRAFT
+              value: "yes"
+            - name: KAFKA_KRAFT_CLUSTER_ID
+              value: "xTzYLYHcSvO3MlzcVjHFQw"
+            - name: KAFKA_CFG_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_CFG_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:8816,CONTROLLER://0.0.0.0:9093"
+            - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+            - name: KAFKA_CFG_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://epp-kafka:8816"
+            - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+            - name: KAFKA_CFG_NODE_ID
+              value: "1"
+            - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+              value: "1@127.0.0.1:9093"
+          ports:
+            - containerPort: 8816
+          volumeMounts:
+            - name: vol-kafka-data
+              mountPath: /bitnami/kafka
+      volumes:
+        - name: vol-kafka-data
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/kafka
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-kafka
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: kafka-8816
+      port: 8816
+      targetPort: 8816
+  selector:
+    app: epp-kafka

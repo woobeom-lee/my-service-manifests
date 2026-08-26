@@ -1,0 +1,240 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-scheduler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-scheduler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-scheduler
+  template:
+    metadata:
+      labels:
+        app: epp-scheduler
+    spec:
+      hostname: cpp-server
+      subdomain: cpp-server
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "epp-kafka"
+            - "cpp-kafka"
+            - "epp-postgres-eppoltp"
+            - "epp-pgbouncer-eppoltp"
+            - "cpp-pgbouncer-eppoltp"
+            - "epp-redis"
+            - "epp-mongo-mongos"
+            - "epp-mgr"
+            - "cpp-mongo-configsvr1"
+            - "cpp-mongo-configsvr2"
+            - "cpp-mongo-configsvr3"
+            - "cpp-tomcat-auth"
+            - "cpp-tomcat-console"
+            - "host.docker.internal"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "Checking Postgres DB connectivity on host port 8817 via hostAliases..."
+              until timeout 1 bash -c "</dev/tcp/epp-postgres-eppoltp/8817" 2>/dev/null; do
+                echo "Database is not ready yet, waiting 3 seconds..."
+                sleep 3
+              done
+              echo "Database connected successfully! Starting AhnLab setup..."
+              echo "Cleaning up directories to allow symlink creation..."
+              rm -rf /opt/ahnlab/cpp/log /opt/ahnlab/cpp/etc /opt/ahnlab/cpp/java /opt/ahnlab/cpp/pg /opt/ahnlab/cpp/save /opt/ahnlab/cpp/pkgroot /opt/ahnlab/cpp/stat 2>/dev/null || true
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              echo "Fixing permissions for Scheduler mounted paths..."
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-machine-id
+              mountPath: /etc/machine-id
+              readOnly: true
+            - name: epp-storage-path-vol
+              mountPath: /opt/ahnlab/cpp/.epp_storage_path
+            - name: epp-storage-path-vol
+              mountPath: /opt/.epp_storage_path
+      initContainers:
+        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
+      containers:
+        - name: epp-scheduler
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-scheduler.sh"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "2Gi"
+          ports:
+            - containerPort: 8832
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-scheduler"
+            - name: DOCKER_HOST
+              value: "unix:///var/run/docker.sock"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Dlogging.config=file:///permanent/etc/config/log4j2.xml -Dlog4j2.configurationFile=file:///permanent/etc/config/log4j2.xml  -Dlog4j2.disable.jmx=true -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true  "
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /etc/fstab
+              subPath: etc/fstab
+            - name: vol-ahnfs-root
+              mountPath: /etc/sudoers
+              subPath: etc/sudoers
+            - name: vol-ahnfs-root
+              mountPath: /etc/login.defs
+              subPath: etc/login.defs
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.d
+              subPath: etc/cron.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.daily
+              subPath: etc/cron.daily
+            - name: vol-ahnfs-root
+              mountPath: /etc/crontab
+              subPath: etc/crontab
+            - name: vol-ahnfs-root
+              mountPath: /etc/logrotate.d
+              subPath: etc/logrotate.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/rsyslog.d
+              subPath: etc/rsyslog.d
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /opt/repo
+              subPath: external/repo
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/install
+              subPath: external/install
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/update
+              subPath: external/update
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-ahnfs-root
+              mountPath: /new
+              subPath: external/new
+            - name: vol-host-log
+              mountPath: /var/host_log
+            - name: vol-machine-id
+              mountPath: /etc/machine-id
+              readOnly: true
+            - name: epp-storage-path-vol
+              mountPath: /opt/ahnlab/cpp/.epp_storage_path
+            - name: epp-storage-path-vol
+              mountPath: /opt/.epp_storage_path
+      volumes:
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory
+        - name: vol-machine-id
+          hostPath:
+            path: /etc/machine-id
+            type: File
+        - name: epp-storage-path-vol
+          hostPath:
+            path: /home/k8s/cpp_installer/epp_storage_path
+            type: FileOrCreate
+ 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-scheduler
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 8832
+      targetPort: 8832
+  selector:
+    app: epp-scheduler

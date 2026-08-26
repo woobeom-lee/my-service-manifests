@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-syslog-sender
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-syslog-sender
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-syslog-sender
+  template:
+    metadata:
+      labels:
+        app: epp-syslog-sender
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: cpp-syslog-sender
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "host.docker.internal"
+      containers:
+        - name: epp-syslog-sender
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-syslog-sender.sh"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-syslog-sender"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms512m -Xmx1024m"
+          volumeMounts:
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            # [원상 복구] 정상적인 호스트 공유 볼륨 사용
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /etc/fstab
+              subPath: etc/fstab
+            - name: vol-ahnfs-root
+              mountPath: /etc/sudoers
+              subPath: etc/sudoers
+            - name: vol-ahnfs-root
+              mountPath: /etc/login.defs
+              subPath: etc/login.defs
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.d
+              subPath: etc/cron.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.daily
+              subPath: etc/cron.daily
+            - name: vol-ahnfs-root
+              mountPath: /etc/crontab
+              subPath: etc/crontab
+            - name: vol-ahnfs-root
+              mountPath: /etc/logrotate.d
+              subPath: etc/logrotate.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/rsyslog.d
+              subPath: etc/rsyslog.d
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /opt/repo
+              subPath: external/repo
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/install
+              subPath: external/install
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/update
+              subPath: external/update
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-ahnfs-root
+              mountPath: /new
+              subPath: external/new
+            - name: vol-host-log
+              mountPath: /var/host_log
+      volumes:
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory

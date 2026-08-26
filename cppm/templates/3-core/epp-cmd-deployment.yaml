@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-cmd
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-cmd
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-cmd
+  template:
+    metadata:
+      labels:
+        app: epp-cmd
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: cpp-cmd
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "epp-kafka"
+            - "cpp-kafka"
+            - "epp-postgres-eppoltp"
+            - "epp-pgbouncer-eppoltp"
+            - "cpp-pgbouncer-eppoltp"
+            - "epp-redis"
+            - "cpp-redis"
+            - "epp-mongo-mongos"
+            - "host.docker.internal"
+      initContainers:
+        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
+      containers:
+        - name: epp-cmd
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-cmd.sh"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+            capabilities:
+              add: ["SYSLOG"]
+          ports:
+            - containerPort: 8858
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-cmd"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms512m -Xmx1024m"
+          volumeMounts:
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /etc/fstab
+              subPath: etc/fstab
+            - name: vol-ahnfs-root
+              mountPath: /etc/sudoers
+              subPath: etc/sudoers
+            - name: vol-ahnfs-root
+              mountPath: /etc/login.defs
+              subPath: etc/login.defs
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.d
+              subPath: etc/cron.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.daily
+              subPath: etc/cron.daily
+            - name: vol-ahnfs-root
+              mountPath: /etc/crontab
+              subPath: etc/crontab
+            - name: vol-ahnfs-root
+              mountPath: /etc/logrotate.d
+              subPath: etc/logrotate.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/rsyslog.d
+              subPath: etc/rsyslog.d
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /opt/repo
+              subPath: external/repo
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/install
+              subPath: external/install
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/update
+              subPath: external/update
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-ahnfs-root
+              mountPath: /new
+              subPath: external/new
+            - name: vol-host-log
+              mountPath: /var/host_log
+      volumes:
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-cmd
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 8858
+      targetPort: 8858
+  selector:
+    app: epp-cmd

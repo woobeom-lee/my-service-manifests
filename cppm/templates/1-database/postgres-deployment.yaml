@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-postgres-eppoltp
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-postgres-eppoltp
+spec:
+  replicas: {{ .Values.database.postgres.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-postgres-eppoltp
+  template:
+    metadata:
+      labels:
+        app: epp-postgres-eppoltp
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      initContainers:
+        - name: init-permissions
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              chown -R 2500:2500 /database
+              chown -R 2500:2500 /var/run/postgresql
+          volumeMounts:
+            - name: vol-database
+              mountPath: /database
+            - name: vol-var-postgres
+              mountPath: /var/run/postgresql
+      containers:
+        - name: postgres
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/database/cmd/epp-postgres-eppoltp.sh"]
+          securityContext:
+            privileged: true
+            runAsUser: 2500
+          ports:
+            - containerPort: 8817
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "/bin/bash"
+                  - "-c"
+                  - |
+                    for i in {1..30}; do
+                      if psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "SELECT 1;" > /dev/null 2>&1; then
+                        echo "Database is ready. Executing license offline bypass queries..."
+                        psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
+                        psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
+                        break
+                      fi
+                      echo "Waiting for PostgreSQL to start..."
+                      sleep 2
+                    done
+          volumeMounts:
+            - name: vol-database
+              mountPath: /database
+            - name: vol-var-postgres
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: vol-database
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}/database
+            type: Directory
+        - name: vol-var-postgres
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}/var/run/postgresql
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-postgres-eppoltp
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 8817
+      targetPort: 8817
+  selector:
+    app: epp-postgres-eppoltp

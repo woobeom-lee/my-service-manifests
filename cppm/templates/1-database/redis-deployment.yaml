@@ -1,0 +1,238 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-redis
+spec:
+  replicas: {{ .Values.database.redis.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-redis
+  template:
+    metadata:
+      labels:
+        app: epp-redis
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: cpp-redis
+      securityContext:
+        runAsUser: 2500
+        runAsGroup: 2500
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: {{ .Values.global.masterIp | quote }}
+          hostnames:
+            - "host.docker.internal"
+            - "epp-postgres-eppoltp"
+            - "epp-redis"
+            - "epp-mongo-mongos"
+            - "epp-mgr"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              if [ -f /permanent/service/redis/conf/redis.conf ]; then
+                echo "Fixing redis.conf bind address to 0.0.0.0..."
+                sed -i '/bind/s/cpp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
+              fi
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              echo "Fixing permissions for Redis mounted paths..."
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
+          volumeMounts:
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /etc/fstab
+              subPath: etc/fstab
+            - name: vol-ahnfs-root
+              mountPath: /etc/sudoers
+              subPath: etc/sudoers
+            - name: vol-ahnfs-root
+              mountPath: /etc/login.defs
+              subPath: etc/login.defs
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.d
+              subPath: etc/cron.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.daily
+              subPath: etc/cron.daily
+            - name: vol-ahnfs-root
+              mountPath: /etc/crontab
+              subPath: etc/crontab
+            - name: vol-ahnfs-root
+              mountPath: /etc/logrotate.d
+              subPath: etc/logrotate.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/rsyslog.d
+              subPath: etc/rsyslog.d
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /opt/repo
+              subPath: external/repo
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/install
+              subPath: external/install
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/update
+              subPath: external/update
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-ahnfs-root
+              mountPath: /new
+              subPath: external/new
+            - name: vol-host-log
+              mountPath: /var/host_log
+      containers:
+        - name: epp-redis
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-redis.sh"]
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              memory: "512Mi"
+          ports:
+            - containerPort: 8831
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-redis"
+            - name: DOCKER_HOST
+              value: "tcp://127.0.0.1:2375"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms192m -Xmx192m -Dfile.encoding=UTF-8 -Dlogging.config=file:///permanent/etc/config/log4j2.xml -Dlog4j2.configurationFile=file:///permanent/etc/config/log4j2.xml   -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true  "
+          volumeMounts:
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /etc/fstab
+              subPath: etc/fstab
+            - name: vol-ahnfs-root
+              mountPath: /etc/sudoers
+              subPath: etc/sudoers
+            - name: vol-ahnfs-root
+              mountPath: /etc/login.defs
+              subPath: etc/login.defs
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.d
+              subPath: etc/cron.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.daily
+              subPath: etc/cron.daily
+            - name: vol-ahnfs-root
+              mountPath: /etc/crontab
+              subPath: etc/crontab
+            - name: vol-ahnfs-root
+              mountPath: /etc/logrotate.d
+              subPath: etc/logrotate.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/rsyslog.d
+              subPath: etc/rsyslog.d
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /opt/repo
+              subPath: external/repo
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/install
+              subPath: external/install
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/update
+              subPath: external/update
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-ahnfs-root
+              mountPath: /new
+              subPath: external/new
+            - name: vol-host-log
+              mountPath: /var/host_log
+      volumes:
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 8831
+      targetPort: 8831
+  selector:
+    app: epp-redis

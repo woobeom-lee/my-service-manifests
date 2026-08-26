@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-xserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-xserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epp-xserver
+  template:
+    metadata:
+      labels:
+        app: epp-xserver
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      containers:
+        - name: epp-xserver
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          # 💡 루트 권한으로 패키지 설치 후 스크립트 실행
+          securityContext:
+            runAsUser: 0
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "==> Installing Xvfb with root privileges..."
+              if command -v yum > /dev/null; then
+                yum install -y xorg-x11-server-Xvfb || true
+              elif command -v apt-get > /dev/null; then
+                apt-get update && apt-get install -y xvfb || true
+              elif command -v microdnf > /dev/null; then
+                microdnf install -y xorg-x11-server-Xvfb || true
+              fi
+              echo "==> Xvfb installation done. Starting epp-xserver.sh..."
+              exec /opt/ahnlab/cpp/cmd/epp-xserver.sh
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+          volumeMounts:
+            - name: vol-cpp
+              mountPath: /opt/ahnlab/cpp
+            - name: vol-permanent
+              mountPath: /permanent
+            - name: vol-tmp
+              mountPath: /tmp
+      volumes:
+        - name: vol-cpp
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/opt/ahnlab/cpp
+            type: DirectoryOrCreate
+        - name: vol-permanent
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/permanent
+            type: DirectoryOrCreate
+        - name: vol-tmp
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/tmp
+            type: DirectoryOrCreate

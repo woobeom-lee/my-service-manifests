@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-cluster-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-cluster-manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-cluster-manager
+  template:
+    metadata:
+      labels:
+        app: epp-cluster-manager
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "host.docker.internal"
+            - "epp-postgres-eppoltp"
+            - "epp-pgbouncer-eppoltp"
+            - "cpp-pgbouncer-eppoltp"
+            - "epp-redis"
+            - "epp-mongo-mongos"
+            - "epp-mgr"
+            - "epp-kafka"
+            - "cpp-kafka"
+            - "cpp-mongo-configsvr1"
+            - "cpp-mongo-configsvr2"
+            - "cpp-mongo-configsvr3"
+            - "cpp-tomcat-auth"
+            - "cpp-tomcat-console"
+      initContainers:
+        - name: wait-for-db
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "Checking Postgres DB connectivity on host port 8817 via hostAliases..."
+              until timeout 1 bash -c "</dev/tcp/epp-postgres-eppoltp/8817" 2>/dev/null; do
+                echo "Database is not ready yet, waiting 3 seconds..."
+                sleep 3
+              done
+              echo "Database is ready! Starting cluster-manager..."
+      initContainers:
+        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
+      containers:
+        - name: epp-cluster-manager
+          image: cpp-platform:9-16-25
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              rm -rf /tmp/hsperfdata_epp 2>/dev/null || true
+              mkdir -p /tmp/hsperfdata_epp
+              echo "Starting epp-cluster-manager..."
+              bash /opt/ahnlab/cpp/cmd/epp-cluster-manager.sh
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "Application crashed with exit code $EXIT_CODE. Sleeping for 1 hour for debugging..."
+                sleep 3600
+              fi
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+PerfDisableSharedMem -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true -Depp.server.id=1 -Dcluster.node.id=1 -Dcluster.id=1 -Dnode.id=1 -Dserver.id=1"
+          volumeMounts:
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-nosql
+              mountPath: /nosql
+            - name: vol-database
+              mountPath: /database
+            - name: vol-tmp
+              mountPath: /tmp
+            - name: vol-home
+              mountPath: /home
+            - name: vol-permanent
+              mountPath: /permanent
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+      volumes:
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}
+            type: Directory
+        - name: vol-nosql
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/nosql
+            type: Directory
+        - name: vol-database
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/database
+            type: Directory
+        - name: vol-tmp
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/tmp
+            type: Directory
+        - name: vol-home
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/home
+            type: Directory
+        - name: vol-permanent
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}/permanent
+            type: Directory
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-cluster-manager
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 8851
+      targetPort: 8851
+  selector:
+    app: epp-cluster-manager

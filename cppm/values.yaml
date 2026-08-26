@@ -1,0 +1,13 @@
+# ==============================================================================
+# 🚀 AhnLab CPPM K8s - 빠른 전환용 Global Values
+# ==============================================================================
+ 
+global:
+  # GHCR 이미지 저장소 주소 (수정 필수)
+  imageRegistry: "ghcr.io/woobeom-lee"
+  # 전체 앱에 일괄 적용될 이미지 태그
+  imageTag: "9-16-25"
+  # 영구 데이터 저장용 호스트 물리 경로
+  hostPathBase: "/home/k8s/cpp_installer/ahnfs"
+  # 노드 스케줄링
+  nodeName: "cpp-server"

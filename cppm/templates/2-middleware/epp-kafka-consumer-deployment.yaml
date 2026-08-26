@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-kafka-consumer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-kafka-consumer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-kafka-consumer
+  template:
+    metadata:
+      labels:
+        app: epp-kafka-consumer
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: cpp-kafka-consumer
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "host.docker.internal"
+            - "epp-postgres-eppoltp"
+            - "epp-redis"
+            - "epp-mongo-mongos"
+            - "epp-mgr"
+            - "epp-kafka"
+            - "cpp-kafka"
+            - "cpp-mongo-configsvr1"
+            - "cpp-mongo-configsvr2"
+            - "cpp-mongo-configsvr3"
+            - "cpp-tomcat-auth"
+            - "cpp-tomcat-console"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "Checking Postgres DB connectivity..."
+              until timeout 1 bash -c "</dev/tcp/127.0.0.1/8817" 2>/dev/null; do
+                echo "Database is not ready yet..."
+                sleep 3
+              done
+              echo "Injecting Kafka bootstrap servers into configuration..."
+              for cfg in /permanent/etc/config/*.properties /opt/ahnlab/cpp/etc/config/*.properties /permanent/etc/config/*.cfg /opt/ahnlab/cpp/etc/config/*.cfg; do
+                if [ -f "$cfg" ]; then
+                  sed -i 's/127.0.0.1:8816/epp-kafka:8816/g' "$cfg" 2>/dev/null || true
+                  sed -i 's/localhost:8816/epp-kafka:8816/g' "$cfg" 2>/dev/null || true
+                  if grep -q "bootstrap" "$cfg"; then
+                    sed -i 's/bootstrap-servers=.*/bootstrap-servers=epp-kafka:8816/g' "$cfg" 2>/dev/null || true
+                  fi
+                fi
+              done
+ 
+              echo "Fixing permissions..."
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+ 
+      containers:
+        - name: epp-kafka-consumer
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo '<configuration><appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender"><encoder><pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern></encoder></appender><root level="INFO"><appender-ref ref="STDOUT" /></root></configuration>' > /tmp/debug-logback.xml
+              exec bash /opt/ahnlab/cpp/cmd/epp-kafka-consumer.sh
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1024Mi"
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-kafka-consumer"
+            - name: DOCKER_HOST
+              value: "unix:///var/run/docker.sock"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Depp.server.id=1 -Dcluster.node.id=1 -Dlogging.config=file:/tmp/debug-logback.xml -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true -Dspring.kafka.bootstrap-servers=epp-kafka:8816 -Dspring.kafka.consumer.bootstrap-servers=epp-kafka:8816 -Dkafka.broker.list=epp-kafka:8816 -Dspring.kafka.consumer.group-id=cpp-kafka-consumer-group -Dspring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer -Dspring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer"
+ 
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            - name: tmpfs-ahnlab
+              mountPath: /opt/ahnlab
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/cpp
+              subPath: opt/ahnlab/cpp
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/ems
+              subPath: opt/ahnlab/ems
+            - name: vol-ahnfs-root
+              mountPath: /nosql
+              subPath: nosql
+            - name: vol-ahnfs-root
+              mountPath: /database
+              subPath: database
+            - name: vol-ahnfs-root
+              mountPath: /tmp
+              subPath: tmp
+            - name: vol-ahnfs-root
+              mountPath: /home
+              subPath: home
+            - name: vol-ahnfs-root
+              mountPath: /etc/fstab
+              subPath: etc/fstab
+            - name: vol-ahnfs-root
+              mountPath: /etc/sudoers
+              subPath: etc/sudoers
+            - name: vol-ahnfs-root
+              mountPath: /etc/login.defs
+              subPath: etc/login.defs
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.d
+              subPath: etc/cron.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/cron.daily
+              subPath: etc/cron.daily
+            - name: vol-ahnfs-root
+              mountPath: /etc/crontab
+              subPath: etc/crontab
+            - name: vol-ahnfs-root
+              mountPath: /etc/logrotate.d
+              subPath: etc/logrotate.d
+            - name: vol-ahnfs-root
+              mountPath: /etc/rsyslog.d
+              subPath: etc/rsyslog.d
+            - name: vol-ahnfs-root
+              mountPath: /var/log
+              subPath: var/log
+            - name: vol-ahnfs-root
+              mountPath: /var/run/postgresql
+              subPath: var/run/postgresql
+            - name: vol-ahnfs-root
+              mountPath: /opt/repo
+              subPath: external/repo
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/install
+              subPath: external/install
+            - name: vol-ahnfs-root
+              mountPath: /opt/ahnlab/update
+              subPath: external/update
+            - name: vol-ahnfs-root
+              mountPath: /permanent
+              subPath: permanent
+            - name: vol-ahnfs-root
+              mountPath: /new
+              subPath: external/new
+            - name: vol-host-log
+              mountPath: /var/host_log
+ 
+      volumes:
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: tmpfs-ahnlab
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.hostPathBase }}
+            type: Directory
+        - name: vol-host-log
+          hostPath:
+            path: /var/log
+            type: Directory

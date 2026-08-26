@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-clair-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: clair-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clair-server
+  template:
+    metadata:
+      labels:
+        app: clair-server
+    spec:
+      # 지정된 노드(cpp-server)에만 파드가 배포되도록 강제
+      nodeSelector:
+        kubernetes.io/hostname: "cpp-server"
+      initContainers:
+        {{- include "cppm.wait-for-dependencies" . | nindent 8 }}
+      containers:
+        - name: clair-server
+          image: "abis.ahnlab.com/cpp/clair-local-scan:latest"
+          imagePullPolicy: IfNotPresent
+          # 💡 [핵심 수정됨] vol-config 마운트 부분에서 subPath 옵션이 완전히 제거되었습니다.
+          volumeMounts:
+            - name: vol-config
+              mountPath: /config/config.yaml
+            - name: vol-cpp
+              mountPath: /opt/ahnlab/cpp
+            - name: vol-permanent
+              mountPath: /permanent
+      volumes:
+        - name: vol-config
+          hostPath:
+            # 원본 호스트 서버의 설정 파일 경로 (단일 파일)
+            path: {{ .Values.global.hostPathBase }}/permanent/clair/config/config.yaml
+            type: File
+        - name: vol-cpp
+          hostPath:
+            # 원본 호스트 서버의 cpp 디렉터리 경로
+            path: {{ .Values.global.hostPathBase }}/opt/ahnlab/cpp
+            type: Directory
+        - name: vol-permanent
+          hostPath:
+            # 원본 호스트 서버의 permanent 디렉터리 경로
+            path: {{ .Values.global.hostPathBase }}/permanent
+            type: Directory
