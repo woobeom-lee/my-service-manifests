@@ -22,7 +22,7 @@ spec:
       containers:
         - name: clair-db
           # 레지스트리, 저장소, 태그를 분리하여 조립합니다.
-          image: "{{ .Values.global.imageRegistry }}/{{ .Values.database.clairDb.image.repository }}:{{ .Values.database.clairDb.image.tag }}"
+          image: "ghcr.io/woobeom-lee/clair-db:latest"
           imagePullPolicy: {{ .Values.database.clairDb.image.pullPolicy }}
           ports:
             - containerPort: 5432
