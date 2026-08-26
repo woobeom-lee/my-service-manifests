@@ -1,13 +1,41 @@
 # ==============================================================================
-# 🚀 AhnLab CPPM K8s - 빠른 전환용 Global Values
+# 🚀 AhnLab CPPM K8s - Global & Database Values
 # ==============================================================================
  
 global:
-  # GHCR 이미지 저장소 주소 (수정 필수)
   imageRegistry: "ghcr.io/woobeom-lee"
-  # 전체 앱에 일괄 적용될 이미지 태그
   imageTag: "9-16-25"
-  # 영구 데이터 저장용 호스트 물리 경로
   hostPathBase: "/home/k8s/cpp_installer/ahnfs"
-  # 노드 스케줄링
   nodeName: "cpp-server"
+ 
+# ==============================================================================
+# Database (1-database 파일들이 참조하는 레플리카 변수들)
+# ==============================================================================
+database:
+  clairDb:
+    replicas: 1
+    image:
+      repository: "clair-db"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+  pgbouncer:
+    replicas: 1
+  postgres:
+    replicas: 1
+  redis:
+    replicas: 1
+  mongo:
+    mongos:
+      replicas: 1
+    configsvr1:
+      replicas: 1
+    configsvr2:
+      replicas: 1
+    configsvr3:
+      replicas: 1
+    shardsvr1:
+      replicas: 1
+    shardsvr2:
+      replicas: 1
+    shardsvr3:
+      replicas: 1
