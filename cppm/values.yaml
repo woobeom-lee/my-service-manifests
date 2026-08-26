@@ -1,18 +1,15 @@
 # ==============================================================================
-# 🚀 AhnLab CPPM K8s - Global & Database Values
+# 🚀 AhnLab CPPM K8s - Global & Database Values (최종 완성본)
 # ==============================================================================
  
 global:
   imageRegistry: "ghcr.io/woobeom-lee"
   imageTag: "9-16-25"
   nodeName: "cpp-server"
-  # 🎯 [긴급 처방] 1-database 파일들이 찾고 있을 만한 변수들을 모두 융단폭격으로 넣습니다!
   hostPathBase: "/home/k8s/cpp_installer/ahnfs"
-  hostPath: "/home/k8s/cpp_installer/ahnfs"
-  volumePath: "/home/k8s/cpp_installer/ahnfs"
-  hostIp: "10.128.88.28"
-  serverIp: "10.128.88.28"
-  ip: "10.128.88.28"
+  # 🎯 [핵심] 방금 엑스레이로 찾아낸 숨겨진 변수들!
+  ahnfsBasePath: "/home/k8s/cpp_installer/ahnfs"
+  masterIp: "10.128.88.28"
  
 # ==============================================================================
 # Database 
