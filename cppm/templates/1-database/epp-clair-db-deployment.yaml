@@ -37,7 +37,7 @@ spec:
                   - "-c"
                   - |
                     for i in {1..30}; do psql -U postgres -c '\q' >/dev/null 2>&1 && break; sleep 2; done;
-                    psql -U postgres -c 'SELECT 1 FROM vulnerability LIMIT 1;' >/dev/null 2>&1 || pg_restore -U postgres -d postgres /root/clair2x-vuln-db.sql -c
+                    psql -U postgres -c 'SELECT 1 FROM vulnerability LIMIT 1;' >/dev/null 2>&1 || pg_restore -U postgres -d postgres /root/clair2x-vuln-db.sql -c || true
       volumes:
         - name: vol-clair-sql
           hostPath:
