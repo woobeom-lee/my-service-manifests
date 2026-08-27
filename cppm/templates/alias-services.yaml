@@ -3,37 +3,42 @@ kind: Service
 metadata:
   name: cpp-pgbouncer-eppoltp
 spec:
-  type: ExternalName
-  externalName: epp-pgbouncer-eppoltp
+  type: ClusterIP
+  selector:
+    app: epp-pgbouncer-eppoltp
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: cpp-postgres-eppoltp
 spec:
-  type: ExternalName
-  externalName: epp-postgres-eppoltp
+  type: ClusterIP
+  selector:
+    app: epp-postgres-eppoltp
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: cpp-kafka
 spec:
-  type: ExternalName
-  externalName: epp-kafka
+  type: ClusterIP
+  selector:
+    app: epp-kafka
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: cpp-redis
 spec:
-  type: ExternalName
-  externalName: epp-redis
+  type: ClusterIP
+  selector:
+    app: epp-redis
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: cpp-mongo-mongos
 spec:
-  type: ExternalName
-  externalName: epp-mongo-mongos
+  type: ClusterIP
+  selector:
+    app: epp-mongo-mongos
