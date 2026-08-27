@@ -225,8 +225,9 @@ metadata:
   name: epp-mongo-mongos
   namespace: {{ .Release.Namespace }}
 spec:
+  type: ClusterIP
+  selector:
+    app: epp-mongo-mongos  
   ports:
     - port: 8825
       targetPort: 8825
-  selector:
-    app: epp-mongo-mongos

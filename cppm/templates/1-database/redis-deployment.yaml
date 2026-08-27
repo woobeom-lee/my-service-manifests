@@ -229,8 +229,9 @@ metadata:
   name: epp-redis
   namespace: {{ .Release.Namespace }}
 spec:
+  type: ClusterIP
+  selector:
+    app: epp-redis
   ports:
     - port: 8831
       targetPort: 8831
-  selector:
-    app: epp-redis

@@ -204,8 +204,9 @@ metadata:
   name: epp-pgbouncer-eppoltp
   namespace: {{ .Release.Namespace }}
 spec:
+  type: ClusterIP
+  selector:
+    app: epp-pgbouncer-eppoltp
   ports:
     - port: 8819
       targetPort: 8819
-  selector:
-    app: epp-pgbouncer-eppoltp

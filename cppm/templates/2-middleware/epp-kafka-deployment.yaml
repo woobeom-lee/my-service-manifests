@@ -80,9 +80,10 @@ metadata:
   name: epp-kafka
   namespace: {{ .Release.Namespace }}
 spec:
+  type: ClusterIP
+  selector:
+    app: epp-kafka
   ports:
     - name: kafka-8816
       port: 8816
       targetPort: 8816
-  selector:
-    app: epp-kafka

@@ -93,8 +93,9 @@ metadata:
   name: epp-postgres-eppoltp
   namespace: {{ .Release.Namespace }}
 spec:
+  type: ClusterIP
+  selector:
+    app: epp-postgres-eppoltp
   ports:
     - port: 8817
       targetPort: 8817
-  selector:
-    app: epp-postgres-eppoltp
