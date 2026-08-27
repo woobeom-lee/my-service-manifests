@@ -19,19 +19,18 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      hostAliases:
+        - ip: "10.128.88.28"
+          hostnames:
+            - "cpp-pgbouncer-eppoltp"
+            - "epp-pgbouncer-eppoltp"
+            - "epp-postgres-eppoltp"
       hostname: cpp-syslog-sender
       nodeSelector:
         kubernetes.io/hostname: "cpp-server"
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
-      hostAliases:
-        - ip: "10.128.88.28"
-          hostnames:
-            - "host.docker.internal"
-      containers:
-        - name: epp-syslog-sender
-          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-syslog-sender.sh"]
           securityContext:

@@ -31,11 +31,11 @@ spec:
             - "host.docker.internal"
       containers:
         - name: epp-rsyslog
-          securityContext:
-            privileged: true
-            runAsUser: 0
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-rsyslog.sh"]
           env:
             - name: TZ

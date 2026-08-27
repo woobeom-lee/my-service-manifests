@@ -1,16 +1,16 @@
 cd /home/registry/my-service-manifests
  
-# 1. [clair-db] 엉뚱한 태그(9-16-25)를 찾지 않도록, 실제 존재하는 'latest' 태그로 강력하게 고정합니다.
-sed -i 's|image:.*|image: "ghcr.io/woobeom-lee/clair-db:latest"|g' cppm/templates/1-database/*clair-db*.yaml
+# 1. syslog-sender (dnsPolicy 바로 아래에 나침반 완벽 주입)
+F_SYS=$(find cppm/templates -name "*syslog-sender*.yaml" | head -n 1)
+sed -i '/hostAliases:/,+6d' "$F_SYS" 2>/dev/null || true
+sed -i '0,/dnsPolicy:.*/s//&\n      hostAliases:\n        - ip: "10.128.88.28"\n          hostnames:\n            - "cpp-pgbouncer-eppoltp"\n            - "epp-pgbouncer-eppoltp"\n            - "epp-postgres-eppoltp"/' "$F_SYS"
  
-# 2. [syslog-sender] 나침반(hostAliases)이 무조건 들어가도록, 파일의 'containers:' 바로 윗줄에 강제로 꽂아 넣습니다.
-sed -i '/hostAliases:/,+10d' cppm/templates/3-core/*syslog-sender*.yaml 2>/dev/null || true
-sed -i '/^[[:space:]]*containers:/i \      hostAliases:\n        - ip: "10.128.88.28"\n          hostnames:\n            - "cpp-pgbouncer-eppoltp"\n            - "epp-pgbouncer-eppoltp"\n            - "epp-postgres-eppoltp"\n            - "epp-redis"\n            - "epp-kafka"' cppm/templates/3-core/*syslog-sender*.yaml
+# 2. rsyslog (imagePullPolicy 바로 아래에 루트 권한 완벽 주입)
+F_RSYS=$(find cppm/templates -name "*rsyslog*.yaml" -type f | grep deployment | head -n 1)
+sed -i '/securityContext:/,+2d' "$F_RSYS" 2>/dev/null || true
+sed -i '0,/imagePullPolicy:.*/s//&\n          securityContext:\n            runAsUser: 0\n            privileged: true/' "$F_RSYS"
  
-# 3. [rsyslog] 컨테이너 내부 계정이 무엇이든 파일을 쓸 수 있도록, 호스트 서버의 /tmp 폴더 권한을 모두에게 개방합니다.
-chmod 777 /home/k8s/cpp_installer/ahnfs/tmp
- 
-# 4. 깃허브로 즉시 전송!
+# 3. 깃허브로 안전하게 전송!
 git add .
-git commit -m "fix: clair-db tag, syslog-sender hostAliases, and tmp directory permissions"
+git commit -m "fix: precise yaml injection for syslog and rsyslog"
 git push origin main
