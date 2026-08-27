@@ -44,6 +44,14 @@ spec:
             - "cpp-tomcat-console"
             - "cpp-tomcat-agent"
             - "host.docker.internal"
+            - "cpp-mongo"
+            - "epp-mongo-mongos"
+            - "cpp-pgbouncer-eppoltp"
+            - "epp-pgbouncer-eppoltp"
+            - "cpp-redis"
+            - "epp-redis"
+            - "cpp-kafka"
+            - "epp-kafka"
  
       initContainers:
         - name: init-link
