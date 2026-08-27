@@ -44,6 +44,8 @@ spec:
             runAsUser: 0
             privileged: true
           env:
+            - name: SPRING_REDIS_HOST
+              value: "epp-redis"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

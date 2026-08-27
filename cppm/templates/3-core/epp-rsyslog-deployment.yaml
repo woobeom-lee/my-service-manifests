@@ -38,7 +38,7 @@ spec:
         - name: epp-rsyslog
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-rsyslog.sh"]
+          command: ["/bin/bash", "-c", "rm -f /tmp/rsyslogd.pid && /usr/sbin/rsyslogd -n"]
           securityContext:
             runAsUser: 0
             privileged: true
