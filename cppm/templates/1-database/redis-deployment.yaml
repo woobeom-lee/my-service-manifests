@@ -33,8 +33,6 @@ spec:
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
-            - "epp-redis"
-            - "epp-mongo-mongos"
             - "epp-mgr"
       initContainers:
         - name: init-link

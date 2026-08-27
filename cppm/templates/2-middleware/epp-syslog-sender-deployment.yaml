@@ -22,8 +22,6 @@ spec:
       hostAliases:
         - ip: "10.128.88.28"
           hostnames:
-            - "cpp-pgbouncer-eppoltp"
-            - "epp-pgbouncer-eppoltp"
             - "epp-postgres-eppoltp"
       hostname: cpp-syslog-sender
       nodeSelector:

@@ -22,14 +22,6 @@ spec:
       hostAliases:
         - ip: {{ .Values.global.masterIp | quote }}
           hostnames:
-            - "cpp-mongo-configsvr1"
-            - "cpp-mongo-configsvr2"
-            - "cpp-mongo-configsvr3"
-            - "cpp-mongo-shardsvr"
-            - "cpp-mongo-shardsvr1"
-            - "cpp-mongo-shardsvr2"
-            - "cpp-mongo-shardsvr3"
-            - "cpp-mongo-mongos"
       containers:
         - name: epp-mongo-shardsvr3
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

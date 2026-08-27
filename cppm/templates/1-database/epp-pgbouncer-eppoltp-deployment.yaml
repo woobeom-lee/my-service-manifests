@@ -29,23 +29,12 @@ spec:
         # 마스터 노드 IP 변수 처리
         - ip: {{ .Values.global.masterIp | quote }}
           hostnames:
-            - "epp-kafka"
-            - "cpp-kafka"
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
-            - "epp-pgbouncer-eppoltp"
-            - "cpp-pgbouncer-eppoltp"
-            - "epp-redis"
-            - "epp-mongo-mongos"
-            - "cpp-mongo-mongos"
             - "epp-mgr"
-            - "cpp-mongo-configsvr1"
-            - "cpp-mongo-configsvr2"
-            - "cpp-mongo-configsvr3"
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
             - "cpp-nginx"
-            - "cpp-kafka-consumer"
             - "cpp-scheduler"
             - "cpp-batch-processor"
       initContainers:

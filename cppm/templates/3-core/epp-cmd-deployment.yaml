@@ -28,14 +28,7 @@ spec:
       hostAliases:
         - ip: "10.128.88.28"
           hostnames:
-            - "epp-kafka"
-            - "cpp-kafka"
             - "epp-postgres-eppoltp"
-            - "epp-pgbouncer-eppoltp"
-            - "cpp-pgbouncer-eppoltp"
-            - "epp-redis"
-            - "cpp-redis"
-            - "epp-mongo-mongos"
             - "host.docker.internal"
       containers:
         - name: epp-cmd

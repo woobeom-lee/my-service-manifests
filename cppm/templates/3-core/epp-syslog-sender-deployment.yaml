@@ -29,13 +29,7 @@ spec:
         - ip: "{{ .Values.global.masterIp }}"
           hostnames:
             - "host.docker.internal"
-            - "cpp-pgbouncer-eppoltp"
-            - "epp-pgbouncer-eppoltp"
             - "epp-postgres-eppoltp"
-            - "epp-redis"
-            - "cpp-redis"
-            - "epp-kafka"
-            - "cpp-kafka"
       containers:
         - name: epp-syslog-sender
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

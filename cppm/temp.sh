@@ -1,9 +1,14 @@
-d /home/registry/my-service-manifests
+cd /home/registry/my-service-manifests
  
-# 1. 아까 추가했던 몽고DB 이름표 바로 밑에, 앱이 진짜로 찾는 이름(cpp-mongo-mongos)을 일괄 추가합니다!
-find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "epp-mongo-mongos"/a \            - "cpp-mongo-mongos"' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "cpp-mongo/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "epp-mongo/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "cpp-pgbouncer/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "epp-pgbouncer/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "cpp-redis/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "epp-redis/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "cpp-kafka/d' {} \;
+find cppm/templates -type f -name "*.yaml" -exec sed -i '/- "epp-kafka/d' {} \;
  
-# 2. 깃허브로 즉시 전송!
 git add .
-git commit -m "fix: add missing cpp-mongo-mongos to hostAliases for all apps"
+git commit -m "fix: remove bad hostAliases preventing internal K8s DNS resolution"
 git push origin main

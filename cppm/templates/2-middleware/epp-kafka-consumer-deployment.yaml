@@ -30,14 +30,7 @@ spec:
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
-            - "epp-redis"
-            - "epp-mongo-mongos"
             - "epp-mgr"
-            - "epp-kafka"
-            - "cpp-kafka"
-            - "cpp-mongo-configsvr1"
-            - "cpp-mongo-configsvr2"
-            - "cpp-mongo-configsvr3"
             - "cpp-tomcat-auth"
             - "cpp-tomcat-console"
       initContainers:

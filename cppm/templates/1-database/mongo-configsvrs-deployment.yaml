@@ -30,12 +30,7 @@ spec:
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
-            - "epp-redis"
-            - "epp-mongo-mongos"
             - "epp-mgr"
-            - "cpp-mongo-configsvr1"
-            - "cpp-mongo-configsvr2"
-            - "cpp-mongo-configsvr3"
       initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"

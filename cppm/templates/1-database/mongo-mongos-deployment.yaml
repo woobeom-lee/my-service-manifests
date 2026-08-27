@@ -33,15 +33,6 @@ spec:
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
-            - "epp-redis"
-            - "epp-mongo-mongos"
-            - "cpp-mongo-configsvr1"
-            - "cpp-mongo-configsvr2"
-            - "cpp-mongo-configsvr3"
-            - "cpp-mongo-shardsvr"
-            - "cpp-mongo-shardsvr1"
-            - "cpp-mongo-shardsvr2"
-            - "cpp-mongo-shardsvr3"
             - "epp-mgr"
       initContainers:
         - name: init-link
