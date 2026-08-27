@@ -34,6 +34,7 @@ spec:
             - "epp-postgres-eppoltp"
             - "epp-redis"
             - "epp-kafka"
+            - "cpp-kafka"
       containers:
         - name: epp-syslog-sender
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -66,7 +67,7 @@ spec:
               subPath: database
             # [원상 복구] 정상적인 호스트 공유 볼륨 사용
             - name: vol-ahnfs-root
-              mountPath: /tmp
+              mountPath: /tmp_host
               subPath: tmp
             - name: vol-ahnfs-root
               mountPath: /home
