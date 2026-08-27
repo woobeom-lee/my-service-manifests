@@ -1,16 +1,17 @@
+# 1. 사용자님이 찾은 깨끗한 원본 파일로 망가진 파일을 덮어써서 완벽 복구합니다.
 cd /home/registry/my-service-manifests
+cp /home/k8s/cppm_k8s/templates/epp-syslog-sender-deployment.yaml cppm/templates/3-core/
+cp /home/k8s/cppm_k8s/templates/epp-rsyslog-deployment.yaml cppm/templates/3-core/
  
-# 1. syslog-sender (dnsPolicy 바로 아래에 나침반 완벽 주입)
-F_SYS=$(find cppm/templates -name "*syslog-sender*.yaml" | head -n 1)
-sed -i '/hostAliases:/,+6d' "$F_SYS" 2>/dev/null || true
-sed -i '0,/dnsPolicy:.*/s//&\n      hostAliases:\n        - ip: "10.128.88.28"\n          hostnames:\n            - "cpp-pgbouncer-eppoltp"\n            - "epp-pgbouncer-eppoltp"\n            - "epp-postgres-eppoltp"/' "$F_SYS"
+# 2. 하드코딩된 IP와 이미지를 K8s 헬름(Helm) 변수로 안전하게 바꿉니다.
+sed -i 's/10.128.88.28/{{ .Values.global.masterIp }}/g' cppm/templates/3-core/epp-syslog-sender-deployment.yaml cppm/templates/3-core/epp-rsyslog-deployment.yaml
+sed -i 's|image: "cpp-platform:9-16-25"|image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"|g' cppm/templates/3-core/epp-syslog-sender-deployment.yaml cppm/templates/3-core/epp-rsyslog-deployment.yaml
  
-# 2. rsyslog (imagePullPolicy 바로 아래에 루트 권한 완벽 주입)
-F_RSYS=$(find cppm/templates -name "*rsyslog*.yaml" -type f | grep deployment | head -n 1)
-sed -i '/securityContext:/,+2d' "$F_RSYS" 2>/dev/null || true
-sed -i '0,/imagePullPolicy:.*/s//&\n          securityContext:\n            runAsUser: 0\n            privileged: true/' "$F_RSYS"
+# 3. 줄 맞춤 파괴 없이, 기존 나침반(host.docker.internal) 바로 밑에 DB 나침반만 살포시 끼워 넣습니다.
+sed -i '/- "host.docker.internal"/a \            - "cpp-pgbouncer-eppoltp"\n            - "epp-pgbouncer-eppoltp"\n            - "epp-postgres-eppoltp"\n            - "epp-redis"\n            - "epp-kafka"' cppm/templates/3-core/epp-syslog-sender-deployment.yaml
+sed -i '/- "host.docker.internal"/a \            - "cpp-pgbouncer-eppoltp"\n            - "epp-pgbouncer-eppoltp"\n            - "epp-postgres-eppoltp"\n            - "epp-redis"\n            - "epp-kafka"' cppm/templates/3-core/epp-rsyslog-deployment.yaml
  
-# 3. 깃허브로 안전하게 전송!
+# 4. 완벽해진 코드를 깃허브로 전송합니다!
 git add .
-git commit -m "fix: precise yaml injection for syslog and rsyslog"
+git commit -m "fix: perfectly restore syslog-sender and rsyslog from pristine backup"
 git push origin main
