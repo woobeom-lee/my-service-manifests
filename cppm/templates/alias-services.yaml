@@ -53,4 +53,4 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: epp-mongo-mongos
+  externalName: epp-mongo-mongos.k8s-cppm.svc.cluster.local
