@@ -44,7 +44,7 @@ metadata:
 spec:
   ports:
     - name: postgres
-      port: 5432
-      targetPort: 5432
+      port: 8817
+      targetPort: 8817
   selector:
     app: clair-db

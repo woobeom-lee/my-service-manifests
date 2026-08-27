@@ -1,15 +1,34 @@
+# 1. 진짜 PgBouncer 서비스의 정확한 Selector 확인
+
+kubectl get svc epp-pgbouncer-eppoltp -n k8s-cppm -o yaml | grep -A 3 "selector:"
+ 
+# 2. 진짜 Kafka 서비스의 정확한 Selector 확인
+
+kubectl get svc epp-kafka -n k8s-cppm -o yaml | grep -A 3 "selector:"
+ 
+# 3. 현재 가짜 서비스들의 목적지(Endpoints)가 비어있는지 팩트 체크
+
+kubectl get endpoints -n k8s-cppm | grep cpp-
+ 
 cd /home/registry/my-service-manifests
  
-# 1. 클러스터에 띄워진 진짜 서비스들의 targetPort를 훔쳐와서 가짜 서비스에 덮어씌웁니다!
-for svc in mongo-mongos pgbouncer-eppoltp postgres-eppoltp redis kafka; do
-    TARGET=$(kubectl get svc epp-$svc -n k8s-cppm -o jsonpath='{.spec.ports[0].targetPort}')
-    if [ ! -z "$TARGET" ]; then
-        find cppm/templates -type f -name "*cpp-${svc}*.yaml" -exec sed -i "s/targetPort:.*/targetPort: $TARGET/g" {} \;
-        echo "✅ cpp-$svc 의 targetPort를 진짜 목적지($TARGET)로 완벽하게 교정했습니다!"
-    fi
-done
+# 1. PgBouncer 포트 교정 (6432 ➡️ 8819)
+
+find cppm/templates -type f -exec sed -i 's/port: 6432/port: 8819/g' {} \;
+
+find cppm/templates -type f -exec sed -i 's/targetPort: 6432/targetPort: 8819/g' {} \;
  
-# 2. 깃허브로 전송!
+# 2. PostgreSQL 포트 교정 (5432 ➡️ 8817)
+
+find cppm/templates -type f -exec sed -i 's/port: 5432/port: 8817/g' {} \;
+
+find cppm/templates -type f -exec sed -i 's/targetPort: 5432/targetPort: 8817/g' {} \;
+ 
+# 3. 깃허브로 강력 푸시!
+
 git add .
-git commit -m "fix: dynamically map accurate targetPorts for cpp alias services"
+
+git commit -m "fix: globally correct database ports for jdbc connections"
+
 git push origin main
+ 
