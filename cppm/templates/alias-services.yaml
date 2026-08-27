@@ -1,56 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: cpp-pgbouncer-eppoltp
-spec:
-  type: ClusterIP
-  selector:
-    app: epp-pgbouncer-eppoltp
-  ports:
-    - port: 8819
-      targetPort: 8819
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cpp-postgres-eppoltp
-spec:
-  type: ClusterIP
-  selector:
-    app: epp-postgres-eppoltp
-  ports:
-    - port: 8817
-      targetPort: 8817
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cpp-kafka
-spec:
-  type: ClusterIP
-  selector:
-    app: epp-kafka
-  ports:
-    - port: 8816
-      targetPort: 8816
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cpp-redis
-spec:
-  type: ClusterIP
-  selector:
-    app: epp-redis
-  ports:
-    - port: 8831
-      targetPort: 8831
----
-apiVersion: v1
-kind: Service
-metadata:
   name: cpp-mongo-mongos
   namespace: {{ .Release.Namespace }}
 spec:
-  type: ExternalName
-  externalName: epp-mongo-mongos.k8s-cppm.svc.cluster.local
+  type: ClusterIP
+  selector:
+    app: epp-mongo-mongos
+  ports:
+    - port: 8825
+      targetPort: 8825
