@@ -1,12 +1,9 @@
 cd /home/registry/my-service-manifests
  
-# 1. [syslog-sender] Spring Boot 기본 환경변수를 주입하여 Redis 목적지를 'epp-redis'로 강제 변경!
-sed -i '/env:/a \            - name: SPRING_REDIS_HOST\n              value: "epp-redis"' cppm/templates/3-core/*syslog-sender*.yaml
+# 1. 앱이 억지를 부려도 무조건 길을 찾을 수 있도록, 나침반(hostAliases) 명단에 'cpp-redis'를 강제로 꽂아 넣습니다.
+sed -i '/- "epp-redis"/a \            - "cpp-redis"' cppm/templates/3-core/*syslog-sender*.yaml
  
-# 2. [rsyslog] 구시대적 docker.sock 호출 스크립트를 버리고, K8s 방식의 직접 실행 명령어로 덮어쓰기!
-sed -i 's|command: \["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-rsyslog.sh"\]|command: \["/bin/bash", "-c", "rm -f /tmp/rsyslogd.pid \&\& /usr/sbin/rsyslogd -n"\]|g' cppm/templates/3-core/*rsyslog*.yaml
- 
-# 3. 깃허브로 전송!
+# 2. 깃허브로 즉시 전송!
 git add .
-git commit -m "fix: override redis host to epp-redis and bypass docker.sock for rsyslog"
+git commit -m "fix: force add cpp-redis to hostAliases for syslog-sender"
 git push origin main

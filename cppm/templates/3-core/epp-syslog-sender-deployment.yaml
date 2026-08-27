@@ -33,6 +33,7 @@ spec:
             - "epp-pgbouncer-eppoltp"
             - "epp-postgres-eppoltp"
             - "epp-redis"
+            - "cpp-redis"
             - "epp-kafka"
             - "cpp-kafka"
       containers:
