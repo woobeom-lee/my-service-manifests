@@ -1,9 +1,9 @@
 cd /home/registry/my-service-manifests
  
-# 1. 앱이 억지를 부려도 무조건 길을 찾을 수 있도록, 나침반(hostAliases) 명단에 'cpp-redis'를 강제로 꽂아 넣습니다.
-sed -i '/- "epp-redis"/a \            - "cpp-redis"' cppm/templates/3-core/*syslog-sender*.yaml
+# 1. clair-db 서비스의 외부 개방 포트를 8835에서 5432로 맞춰줍니다.
+sed -i 's/port: 8835/port: 5432/g' cppm/templates/1-database/*clair-db*.yaml
  
 # 2. 깃허브로 즉시 전송!
 git add .
-git commit -m "fix: force add cpp-redis to hostAliases for syslog-sender"
+git commit -m "fix: change clair-db service port from 8835 to 5432 to match server config"
 git push origin main
