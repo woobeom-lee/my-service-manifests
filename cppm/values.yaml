@@ -2,8 +2,8 @@ global:
   imageRegistry: "ghcr.io/woobeom-lee"
   imageTag: "9-16-25"
   nodeName: "cpp-server"
-  hostPathBase: "/home/k8s/cpp_installer/ahnfs"
-  ahnfsBasePath: "/home/k8s/cpp_installer/ahnfs"
+  hostPathBase: "/data/ahnfs"
+  ahnfsBasePath: "/data/ahnfs"
   masterIp: "10.128.88.28"
  
 database:
