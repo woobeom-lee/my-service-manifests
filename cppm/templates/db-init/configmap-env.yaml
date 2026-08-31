@@ -1,0 +1,21 @@
+{{- if .Values.dbInit.enabled -}}
+{{ $psql_svc_name := .Values.postgresql.name | required ".Values.postgresql.name is required." }}
+{{ $psql_port := .Values.postgresql.port | required ".Values.postgresql.port is required." }}
+{{ $mongodb_svc_name := .Values.mongodb.name | required ".Values.mongodb.name is required." }}
+{{ $mongodb_port := .Values.mongodb.port | required ".Values.mongodb.port is required." }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.dbInit.name }}-env-cm
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-3"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+data:
+  POSTGRESQL_URL: {{ printf "%s.%s.svc.cluster.local" $psql_svc_name .Release.Namespace }}
+  POSTGRESQL_PORT: {{ $psql_port | quote }}
+  MONGODB_URL: {{ printf "%s.%s.svc.cluster.local" $mongodb_svc_name .Release.Namespace }}
+  MONGODB_PORT: {{ $mongodb_port | quote }}
+{{- end }}

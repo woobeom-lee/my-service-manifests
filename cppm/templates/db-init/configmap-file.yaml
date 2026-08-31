@@ -1,0 +1,31 @@
+{{- if .Values.dbInit.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.dbInit.name }}-file-cm
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-3"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+data:
+  init.sh: |
+    #!/bin/bash
+    mkdir -p /permanent
+    ln -s /nfs/etc /permanent/etc
+    ln -s /permanent/etc /opt/ahnlab/cpp/etc
+    bash /opt/ahnlab/cpp/bin/schema/update/saas/pre_datadb_local_schema_set.sh install
+    bash /init/devops_init.sh
+ 
+  devops_psql_init.sql: |
+    update tb_server set public_ip = '{{ .Values.postgresql.user }}.acsp.ahnlab.com';
+    update tb_config set value = true where config_group = 'NETWORK' and key = 'use_nat';
+    update tb_config set value = 'https://acsp.ahnlab.com/gateway/user/login/csrfToken', modified_time = NOW() where config_group = 'SAAS_AUTH' and "key" = 'csrf_token_address';
+    update tb_config set value = 'https://acsp.ahnlab.com/gateway/user/login', modified_time = NOW() where config_group = 'SAAS_AUTH' and "key" = 'jwt_token_address';
+    update tb_config set value = '{"brokers":"{{ .Values.kafka.ncp.brokers }}","protocol":"{{ .Values.kafka.ncp.protocol }}","sasl":"{{ .Values.kafka.ncp.sasl }}","jaas_username":"{{ .Values.kafka.ncp.jaas_username }}","jaas_password":"{{ .Values.kafka.ncp.jaas_password }}"}', modified_time = NOW() where config_group = 'SAAS_KAFKA' and "key" = 'ahnlab';
+ 
+  devops_init.sh: |
+    #!/bin/bash
+    PGPASSWORD=${POSTGRESQL_PASSWORD} psql -h ${POSTGRESQL_URL} -p ${POSTGRESQL_PORT} -U ${POSTGRESQL_USER} -d ${POSTGRESQL_DATABASE} < /init/devops_psql_init.sql
+{{- end }}

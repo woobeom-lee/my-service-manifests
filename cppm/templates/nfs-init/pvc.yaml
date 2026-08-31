@@ -1,0 +1,20 @@
+{{- if .Values.nfsInit.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Namespace }}-pvc
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-5"
+    argocd.argoproj.io/sync-options: Prune=false, Delete=false
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.nfsInit.storage }}
+  storageClassName: {{ .Values.nfsInit.storageClassName }}
+{{- end }}

@@ -1,0 +1,43 @@
+{{- if .Values.nfsInit.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.nfsInit.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      restartPolicy: {{ .Values.nfsInit.restartPolicy | default "OnFailure" }}
+      containers:
+        - name: {{ .Values.nfsInit.name }}
+          image: {{ .Values.nfsInit.repository }}:{{ .Values.nfsInit.version }}
+          imagePullPolicy: {{ .Values.nfsInit.pullPolicy | default "IfNotPresent" }}
+          envFrom:
+          - configMapRef:
+              name: {{ .Values.nfsInit.name }}-env-cm
+          volumeMounts:
+          - name: nfs
+            mountPath: /nfs
+          - name: {{ .Values.nfsInit.name }}-secret
+            mountPath: /secret
+          - name: {{ .Values.nfsInit.name }}-file-cm
+            mountPath: /init
+          command: [/bin/bash, /init/init.sh]
+      volumes:
+      - name: nfs
+        persistentVolumeClaim:
+          claimName: {{ .Release.Namespace }}-pvc
+      - name: {{ .Values.nfsInit.name }}-secret
+        secret:
+          secretName: {{ .Values.nfsInit.name }}-secret
+          defaultMode: 256
+      - name: {{ .Values.nfsInit.name }}-file-cm
+        configMap:
+          name: {{ .Values.nfsInit.name }}-file-cm
+          defaultMode: 0755
+{{- end }}

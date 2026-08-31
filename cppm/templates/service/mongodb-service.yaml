@@ -1,0 +1,15 @@
+{{- if .Values.mongodb.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.mongodb.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-3"
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  type: ExternalName
+  externalName: {{ .Values.mongodb.externalName }}
+{{- end }}
