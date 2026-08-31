@@ -1,6 +1,50 @@
 global:
   imageRegistry: abis.ahnlab.com/cwpp-docker-snapshot-local/csap
 
+cat << 'EOF' > values.yaml
+# ==============================================================================
+# 🚀 AhnLab CPPM K8s - Global & Database Values (인프라 뼈대)
+# ==============================================================================
+global:
+  imageRegistry: "ghcr.io/woobeom-lee"
+  imageTag: "9-16-25"
+  nodeName: "cpp-server"
+  hostPathBase: "/home/k8s/cpp_installer/ahnfs"
+  ahnfsBasePath: "/home/k8s/cpp_installer/ahnfs"
+  masterIp: "10.128.88.28"
+ 
+database:
+  clairDb:
+    replicas: 1
+    image:
+      repository: "clair-db"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+  pgbouncer:
+    replicas: 1
+  postgres:
+    replicas: 1
+  redis:
+    replicas: 1
+  mongo:
+    mongos:
+      replicas: 1
+    configsvr1:
+      replicas: 1
+    configsvr2:
+      replicas: 1
+    configsvr3:
+      replicas: 1
+    shardsvr1:
+      replicas: 1
+    shardsvr2:
+      replicas: 1
+    shardsvr3:
+      replicas: 1
+ 
+# ==============================================================================
+# ⚙️ Application & Init Services Values (앱 & 초기화 설정)
+# ==============================================================================
 externalService:
   enabled: true
   name: external
@@ -27,7 +71,6 @@ mongodb:
   collection: eppnosqluser
   user: eppnosqluser
   password: "qwe123"
- 
   externalList:
     primary00: cpp-mongo-mongos.k8s-cppm.svc.cluster.local
     secondary01: cpp-mongo-mongos.k8s-cppm.svc.cluster.local
@@ -139,3 +182,8 @@ cmd:
     xserverName: xserver-port
     xserverContainerPort: 2186
     xserverServicePort: 2186
+EOF
+ 
+git add values.yaml
+git commit -m "fix: merge global, database, and app configs into values.yaml"
+git push origin main
