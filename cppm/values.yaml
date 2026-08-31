@@ -1,11 +1,4 @@
 global:
-  imageRegistry: abis.ahnlab.com/cwpp-docker-snapshot-local/csap
-
-cat << 'EOF' > values.yaml
-# ==============================================================================
-# 🚀 AhnLab CPPM K8s - Global & Database Values (인프라 뼈대)
-# ==============================================================================
-global:
   imageRegistry: "ghcr.io/woobeom-lee"
   imageTag: "9-16-25"
   nodeName: "cpp-server"
@@ -42,9 +35,6 @@ database:
     shardsvr3:
       replicas: 1
  
-# ==============================================================================
-# ⚙️ Application & Init Services Values (앱 & 초기화 설정)
-# ==============================================================================
 externalService:
   enabled: true
   name: external
@@ -182,8 +172,3 @@ cmd:
     xserverName: xserver-port
     xserverContainerPort: 2186
     xserverServicePort: 2186
-EOF
- 
-git add values.yaml
-git commit -m "fix: merge global, database, and app configs into values.yaml"
-git push origin main
