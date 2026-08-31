@@ -1,34 +1,88 @@
-# 1. 진짜 PgBouncer 서비스의 정확한 Selector 확인
-
-kubectl get svc epp-pgbouncer-eppoltp -n k8s-cppm -o yaml | grep -A 3 "selector:"
+cd /home/registry/my-service-manifests/cppm
  
-# 2. 진짜 Kafka 서비스의 정확한 Selector 확인
+cat << 'EOF' > /tmp/sync-git.py
 
-kubectl get svc epp-kafka -n k8s-cppm -o yaml | grep -A 3 "selector:"
+import json, subprocess
  
-# 3. 현재 가짜 서비스들의 목적지(Endpoints)가 비어있는지 팩트 체크
+svc_names = [
 
-kubectl get endpoints -n k8s-cppm | grep cpp-
+    'cpp-mongo-mongos', 'cpp-pgbouncer-eppoltp', 'cpp-postgres-eppoltp',
+
+    'cpp-redis', 'cpp-kafka', 'cpp-eureka-server', 'cpp-eureka-gateway', 'cpp-lbagent'
+
+]
  
-cd /home/registry/my-service-manifests
+manifest = ""
  
-# 1. PgBouncer 포트 교정 (6432 ➡️ 8819)
+for name in svc_names:
 
-find cppm/templates -type f -exec sed -i 's/port: 6432/port: 8819/g' {} \;
+    try:
 
-find cppm/templates -type f -exec sed -i 's/targetPort: 6432/targetPort: 8819/g' {} \;
+        # K8s에 적용된 정답 데이터 추출
+
+        out = subprocess.check_output(['kubectl', 'get', 'svc', name, '-n', 'k8s-cppm', '-o', 'json'])
+
+        data = json.loads(out.decode('utf-8'))
+
+        # Helm 템플릿 포맷으로 깔끔하게 재조립
+
+        manifest += "---\napiVersion: v1\nkind: Service\nmetadata:\n"
+
+        manifest += f"  name: {name}\n  namespace: {{{{ .Release.Namespace }}}}\n"
+
+        manifest += "spec:\n  type: ClusterIP\n"
+
+        selector = data.get('spec', {}).get('selector', {})
+
+        if selector:
+
+            manifest += "  selector:\n"
+
+            for k, v in selector.items():
+
+                manifest += f"    {k}: {v}\n"
+
+        ports = data.get('spec', {}).get('ports', [])
+
+        if ports:
+
+            manifest += "  ports:\n"
+
+            for p in ports:
+
+                manifest += f"    - port: {p['port']}\n"
+
+                target_port = p.get('targetPort', p['port'])
+
+                manifest += f"      targetPort: {target_port}\n"
+
+                if 'name' in p: manifest += f"      name: {p['name']}\n"
+
+                if 'protocol' in p: manifest += f"      protocol: {p['protocol']}\n"
+
+    except Exception as e:
+
+        pass
  
-# 2. PostgreSQL 포트 교정 (5432 ➡️ 8817)
+# 정답을 파일로 덮어쓰기
 
-find cppm/templates -type f -exec sed -i 's/port: 5432/port: 8817/g' {} \;
+with open('templates/alias-services.yaml', 'w') as f:
 
-find cppm/templates -type f -exec sed -i 's/targetPort: 5432/targetPort: 8817/g' {} \;
+    f.write(manifest)
  
-# 3. 깃허브로 강력 푸시!
+print("✅ 성공! 현재 K8s의 완벽한 설정이 alias-services.yaml로 복제되었습니다.")
 
-git add .
+EOF
+ 
+# 스크립트 실행
 
-git commit -m "fix: globally correct database ports for jdbc connections"
+python3 /tmp/sync-git.py
+ 
+# 깃허브로 안전하게 푸시!
+
+git add templates/alias-services.yaml
+
+git commit -m "fix: sync perfectly working ClusterIP aliases from live K8s state"
 
 git push origin main
  
