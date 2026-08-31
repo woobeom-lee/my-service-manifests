@@ -1,41 +1,15 @@
-{{- if .Values.nfsInit.enabled -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.nfsInit.name }}-file-cm
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    helm.sh/hook: pre-install
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/sync-wave: "-5"
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+  name: nfs-init-file-cm
 data:
-  {{- range $path, $_ := .Files.Glob "conf/*" }}
-  {{ $path | trimPrefix "conf/" }}: |
-    {{- tpl ($.Files.Get $path) $ | nindent 4 -}}
-  {{ end }}
-  init.sh: |
+  init.sh: |-
     #!/bin/bash
-    tar xfp /data/nfs.tar -C /nfs
-    for dest in /init/*; do
-      file=${dest#/init/}
-      if [ -f /init/$file ] && [ $file != "init.sh" ]; then
-        cp -f /init/$file /tmp/$file
-        /data/tools/encfile3 /nfs/etc/config/site.key /tmp/$file
-        if [ ! -e /nfs/etc/config/$file ]; then
-          cp -f /tmp/$file.enc /nfs/etc/config/$file
-        fi
-      fi
-    done
-    for dest in /secret/*; do
-      file=${dest#/secret/}
-      if [ ! -e /nfs/etc/cert/$file ]; then
-        cp -f /secret/$file /nfs/etc/cert/$file
-        chown 2500:2500 /nfs/etc/cert/$file
-      fi
-    done
-    ln -s /nfs/log /opt/ahnlab/cpp/log
-    ln -s /nfs/etc /opt/ahnlab/cpp/etc
-    mkdir -p /opt/ahnlab/cpp/run
-    /opt/ahnlab/cpp/bin/schema/update/saas/pre_cli_local_set.sh
-{{- end }}
+    echo "==== Starting On-Premise NFS Initialization ===="
+    # 1. CPPM이 사용할 기본 NFS 디렉토리들만 순수하게 생성
+    mkdir -p /nfs/log
+    mkdir -p /nfs/etc
+    mkdir -p /nfs/data
+    # 2. 파드들이 접근할 수 있도록 권한 부여
+    chmod -R 777 /nfs
+    echo "==== NFS Initialization Completed Successfully! ===="
