@@ -1,3 +1,6 @@
+global:
+  imageRegistry: abis.ahnlab.com/cwpp-docker-snapshot-local/csap
+
 externalService:
   enabled: true
   name: external
