@@ -73,8 +73,8 @@ mongodb:
 nfsInit:
   enabled: true
   name: nfs-init
-  repository: abis.ahnlab.com/cwpp-docker-snapshot-local/csap/cpp-init
-  version: 8.8.29
+  repository: ghcr.io/woobeom-lee/cpp-init
+  version: latest
   pullPolicy: Always
   restartPolicy: OnFailure
   storage: 100Gi
@@ -83,8 +83,8 @@ nfsInit:
 dbInit:
   enabled: true
   name: db-init
-  repository: abis.ahnlab.com/cwpp-docker-snapshot-local/csap/cpp-init4db
-  version: 8.8.29
+  repository: ghcr.io/woobeom-lee/cpp-init4db
+  version: latest
   pullPolicy: Always
   restartPolicy: OnFailure
  
