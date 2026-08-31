@@ -6,14 +6,20 @@ data:
   init.sh: |-
     #!/bin/bash
     echo "==== Starting Automated On-Premise NFS Initialization ===="
-    # 1. 도커 이미지 내부에 구워진 압축 파일을 공유 볼륨(/nfs)에 해제
-    echo "Extracting ahnfs.tar.gz..."
-    tar -zxvf /data/ahnfs.tar.gz -C /nfs/
-    # 2. 이중 폴더(ahnfs/ahnfs)로 풀렸을 경우를 대비한 자동 정리 로직
+    # 1. 도커 이미지 내부에 구워진 압축 파일 해제
+    if [ -f /data/ahnfs.tar.gz ]; then
+      tar -zxvf /data/ahnfs.tar.gz -C /nfs/
+    fi
+    # 2. 이중 폴더(ahnfs/ahnfs) 구조 정리
     if [ -d "/nfs/ahnfs" ]; then
       mv /nfs/ahnfs/* /nfs/
       rm -rf /nfs/ahnfs
     fi
-    # 3. 파드들이 접근할 수 있도록 넉넉한 권한 부여
+    # 3. 파드 마운트 시 'not a directory' 에러를 유발하는 누락 파일 선제 생성
+    echo "Creating missing mount files..."
+    mkdir -p /nfs/etc
+    touch /nfs/etc/sudoers
+    touch /nfs/etc/login.defs
+    # 4. 전체 권한 부여
     chmod -R 777 /nfs
     echo "==== NFS Initialization Completed Successfully! ===="
