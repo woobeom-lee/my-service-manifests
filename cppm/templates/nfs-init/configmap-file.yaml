@@ -5,21 +5,30 @@ metadata:
 data:
   init.sh: |-
     #!/bin/bash
-    echo "==== Starting Automated On-Premise NFS Initialization ===="
-    # 1. 도커 이미지 내부에 구워진 압축 파일 해제
-    if [ -f /data/ahnfs.tar.gz ]; then
-      tar -zxvf /data/ahnfs.tar.gz -C /nfs/
+    echo "==== Starting On-Premise NFS Initialization ===="
+    # 1. 수동 세팅 여부 확인 (이미 뼈대가 존재하면 압축 해제 스킵)
+    if [ -f "/nfs/etc/sudoers" ] && [ -d "/nfs/permanent" ]; then
+      echo "[SKIP] Host directory is already prepped manually."
+    else
+      echo "[RUN] Extracting ahnfs.tar.gz..."
+      if [ -f /data/ahnfs.tar.gz ]; then
+        tar -zxvf /data/ahnfs.tar.gz -C /nfs/
+      fi
     fi
     # 2. 이중 폴더(ahnfs/ahnfs) 구조 정리
     if [ -d "/nfs/ahnfs" ]; then
       mv /nfs/ahnfs/* /nfs/
       rm -rf /nfs/ahnfs
     fi
-    # 3. 파드 마운트 시 'not a directory' 에러를 유발하는 누락 파일 선제 생성
-    echo "Creating missing mount files..."
+    # 3. K8s 마운트 에러(not a directory) 방지용 필수 파일 4종 강제 생성
+    echo "Verifying missing mount files..."
     mkdir -p /nfs/etc
     touch /nfs/etc/sudoers
     touch /nfs/etc/login.defs
-    # 4. 전체 권한 부여
+    mkdir -p /nfs/permanent/clair/sql
+    mkdir -p /nfs/permanent/clair/config
+    touch /nfs/permanent/clair/sql/clair2x-vuln-db.sql
+    touch /nfs/permanent/clair/config/config.yaml
+    # 4. 넉넉한 권한 부여
     chmod -R 777 /nfs
     echo "==== NFS Initialization Completed Successfully! ===="

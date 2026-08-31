@@ -5,5 +5,26 @@ metadata:
 data:
   init.sh: |-
     #!/bin/bash
-    echo "==== Bypassing DB Init temporarily to release Deadlock ===="
-    exit 0
+    echo "==== Starting Database Initialization ===="
+    # values.yaml에 정의된 PostgreSQL 접속 정보
+    export PGPASSWORD="qweQWE123!@#"
+    DB_HOST="cpp-postgres-eppoltp.k8s-cppm.svc.cluster.local"
+    DB_PORT="8817"
+    DB_USER="eppoltpuser"
+    DB_NAME="cppoltp"
+    echo "Waiting for PostgreSQL to be ready at $DB_HOST:$DB_PORT..."
+    # PostgreSQL이 완전히 기동되어 통신이 가능해질 때까지 무한 대기 (Deadlock의 원인이었으나 이젠 통과됨!)
+    until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
+      echo "PostgreSQL is unavailable - sleeping 3s..."
+      sleep 3
+    done
+    echo "PostgreSQL is ready! Executing initialization scripts..."
+    # db-init 도커 이미지 안에 구워둔 원본 SQL 덤프 파일을 밀어 넣는 명령어
+    # (이미지 내부에 구워진 파일 경로가 /data/init.sql이 아니라면 실제 경로로 수정해주세요)
+    if [ -f "/data/init.sql" ]; then
+      psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f /data/init.sql
+      echo "Database schemas and tables created successfully."
+    else
+      echo "Warning: /data/init.sql not found. Skipping table creation."
+    fi
+    echo "==== Database Initialization Completed Successfully! ===="

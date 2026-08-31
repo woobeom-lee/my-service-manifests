@@ -1,16 +1,19 @@
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
  
-# 1. 기본 유틸리티 및 PostgreSQL, Kafka 클라이언트 설치
 RUN apt-get update && apt-get install -y \
     bash curl wget jq tzdata gnupg \
     postgresql-client kafkacat \
 && rm -rf /var/lib/apt/lists/*
  
-# 2. MongoDB 공식 저장소 인증키 추가 및 mongosh(클라이언트) 설치
 RUN curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg \
 && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list \
 && apt-get update && apt-get install -y mongodb-mongosh mongodb-org-tools \
 && rm -rf /var/lib/apt/lists/*
+ 
+# ▼ 이 부분을 추가합니다 ▼
+RUN mkdir -p /db-sql
+COPY *.sql /db-sql/
+# ▲ 여기까지 ▲
  
 CMD ["/bin/bash"]
