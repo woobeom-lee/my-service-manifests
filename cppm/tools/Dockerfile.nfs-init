@@ -1,6 +1,12 @@
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
+ 
 RUN apt-get update && apt-get install -y \
     bash curl wget jq nfs-common tzdata \
 && rm -rf /var/lib/apt/lists/*
+ 
+RUN mkdir -p /data
+# ▼ 찾으신 진짜 뼈대 압축 파일을 이미지 안에 구워 넣습니다 ▼
+COPY ahnfs.tar.gz /data/ahnfs.tar.gz
+ 
 CMD ["/bin/bash"]
