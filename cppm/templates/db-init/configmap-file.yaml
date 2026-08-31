@@ -5,22 +5,5 @@ metadata:
 data:
   init.sh: |-
     #!/bin/bash
-    echo "==== Starting On-Premise DB Initialization ===="
-    # 확정된 DB 접속 정보
-    DB_HOST="postgresql.k8s-cppm.svc.cluster.local"
-    DB_PORT="8817"
-    DB_USER="eppoltpuser"
-    DB_NAME="cppoltp"
-    # psql 명령어가 자동으로 인식할 패스워드 환경변수
-    export PGPASSWORD="qweQWE123!@#"
-    echo "1. Waiting for PostgreSQL to be ready..."
-    until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
-      echo "Waiting..."
-      sleep 3
-    done
-    echo "2. Applying Schema..."
-    psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f /db-sql/cppoltp_schema.sql
-    # 필요시 추가 설정 파일 실행 (주석 해제 후 사용)
-    # psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f /db-sql/tb_config.sql
-    # psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f /db-sql/tb_server.sql
-    echo "==== DB Initialization Completed Successfully! ===="
+    echo "==== Bypassing DB Init temporarily to release Deadlock ===="
+    exit 0
