@@ -1,3 +1,11 @@
+externalService:
+  enabled: true
+  name: external
+ 
+internalService:
+  enabled: true
+  name: internal
+ 
 postgresql:
   enabled: true
   name: postgresql
@@ -6,17 +14,17 @@ postgresql:
   database: cppoltp
   schema: cppm
   user: eppoltpuser
-  password: "qweQWE123!@#"  # 담당자 확인 기본값 적용
-
+  password: "qweQWE123!@#"
+ 
 mongodb:
   enabled: true
   name: mongodb
   externalName: cpp-mongo-mongos.k8s-cppm.svc.cluster.local
   port: 8825
-  collection: eppnosqluser  # 통상적으로 DB명은 user명과 동일하게 세팅됩니다.
-  user: eppnosqluser        # eppnosql -> eppnosqluser 로 수정
-  password: "qwe123"        # 담당자 확인 기본값 적용
-
+  collection: eppnosqluser
+  user: eppnosqluser
+  password: "qwe123"
+ 
   externalList:
     primary00: cpp-mongo-mongos.k8s-cppm.svc.cluster.local
     secondary01: cpp-mongo-mongos.k8s-cppm.svc.cluster.local
@@ -25,3 +33,106 @@ mongodb:
     primary00: 8825
     secondary01: 8825
     secondary02: 8825
+ 
+nfsInit:
+  enabled: true
+  name: nfs-init
+  repository: abis.ahnlab.com/cwpp-docker-snapshot-local/csap/cpp-init
+  version: 8.8.29
+  pullPolicy: Always
+  restartPolicy: OnFailure
+  storage: 100Gi
+  storageClassName: nfs-client
+ 
+dbInit:
+  enabled: true
+  name: db-init
+  repository: abis.ahnlab.com/cwpp-docker-snapshot-local/csap/cpp-init4db
+  version: 8.8.29
+  pullPolicy: Always
+  restartPolicy: OnFailure
+ 
+tomcatConsole:
+  enabled: true
+  name: tomcat-console
+  ports:
+    name: console-port
+    containerPort: 8806
+    servicePort: 8803
+ 
+tomcatAgent:
+  enabled: true
+  name: tomcat-agent
+  ports:
+    name: agent-port
+    containerPort: 8807
+    servicePort: 8804
+ 
+tomcatAuth:
+  enabled: true
+  name: tomcat-auth
+  ports:
+    name: auth-port
+    containerPort: 8808
+    servicePort: 8808
+ 
+lighttpd:
+  enabled: true
+  name: lighttpd
+  ports:
+    httpsName: lighttpd-https
+    httpsContainerPort: 8809
+    httpsServicePort: 5645
+    httpName: lighttpd-http
+    httpContainerPort: 8810
+    httpServicePort: 5465
+ 
+zookeeper:
+  enabled: true
+  name: zookeeper
+  ports:
+    name: zookeeper-port
+    containerPort: 8815
+    servicePort: 8815
+ 
+kafka:
+  enabled: true
+  name: kafka
+  ports:
+    name: kafka-port
+    containerPort: 8816
+    servicePort: 8816
+  ncp:
+    brokers: 10.128.106.134:9092,10.128.106.135:9092,10.128.106.136:9092
+    protocol: PLAINTEXT
+    sasl: PLAIN
+    group: batch
+    jaas_username: kafkaadmin
+    jaas_password: rkrkapf88!!
+ 
+redis:
+  enabled: true
+  name: redis
+  ports:
+    name: redis-port
+    containerPort: 8831
+    servicePort: 8831
+ 
+scheduler:
+  enabled: true
+  name: scheduler
+  ports:
+    name: scheduler-port
+    containerPort: 8832
+    servicePort: 8832
+ 
+cmd:
+  enabled: true
+  name: cmd
+  ports:
+    cmdName: cmd-port
+    cmdContainerPort: 8858
+    cmdServicePort: 8853
+    xserverName: xserver-port
+    xserverContainerPort: 2186
+    xserverServicePort: 2186
