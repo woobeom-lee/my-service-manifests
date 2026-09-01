@@ -17,7 +17,7 @@ data:
     echo "==== NFS Initialization Completed Successfully! ===="
  
   # ========================================================
-  # 1. 압축 해제 담당 스크립트
+  # 1. 압축 해제 스크립트
   # ========================================================
   01-extract.sh: |-
     #!/bin/bash
@@ -36,16 +36,15 @@ data:
     elif [ -f "/tools/ahnfs.tar.gz" ]; then
       tar -zxvf /tools/ahnfs.tar.gz -C /nfs/ > /dev/null
     else
-      echo "[ERROR] Setup tar file not found in /tools directory!"
+      echo "[ERROR] Setup tar file not found!"
       exit 1
     fi
  
   # ========================================================
-  # 2. 경로 맞춤 & 설정 파일(XML, 폴더) 자동 생성 스크립트
+  # 2. 경로 맞춤 & 설정 파일 복사 스크립트
   # ========================================================
   02-setup.sh: |-
     #!/bin/bash
-    # (1) 잘못 풀린 폴더들 제자리로 이동
     mkdir -p /nfs/opt/ahnlab/cpp
     if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then
       mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
@@ -58,7 +57,6 @@ data:
       rm -rf /nfs/ahnfs
     fi
  
-    # (2) K8s 볼륨 마운트 에러 방지용 빈 파일 생성
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
@@ -66,44 +64,42 @@ data:
       touch "$file"
     done
  
-    # (3) Java 애플리케이션용 log4j2.xml 자동 생성
+    # 🚀 [핵심 수정] 무식한 echo 대신 ConfigMap에 분리된 원본 파일을 그대로 복사(cp)
+    echo "Copying log4j2.xml from ConfigMap..."
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ -d "$LOG_XML" ]; then rm -rf "$LOG_XML"; fi
-    echo '<?xml version="1.0" encoding="UTF-8"?>' > $LOG_XML
-    echo '<Configuration status="INFO">' >> $LOG_XML
-    echo '  <Appenders>' >> $LOG_XML
-    echo '    <Console name="Console" target="SYSTEM_OUT">' >> $LOG_XML
-    echo '      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n"/>' >> $LOG_XML
-    echo '    </Console>' >> $LOG_XML
-    echo '  </Appenders>' >> $LOG_XML
-    echo '  <Loggers>' >> $LOG_XML
-    echo '    <Root level="info">' >> $LOG_XML
-    echo '      <AppenderRef ref="Console"/>' >> $LOG_XML
-    echo '    </Root>' >> $LOG_XML
-    echo '  </Loggers>' >> $LOG_XML
-    echo '</Configuration>' >> $LOG_XML
-    # 🚀 [추가됨] (4) Kubelet이 만든 가짜 log '파일' 파괴 후 폴더 일괄 생성
+    cp /init/log4j2.xml "$LOG_XML"
     echo "Creating log directories..."
-    if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then
-      echo "Removing dummy log file created by Kubelet..."
-      rm -f /nfs/opt/ahnlab/cpp/log
-    fi
+    if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
-    # 🚀 [추가됨] (5) Java 보안 모듈 기동을 위한 가짜 site.key 자동 생성
     echo "Generating dummy site.key..."
     echo "cppm-dummy-secure-key-1234567890" > /nfs/permanent/etc/config/site.key
  
   # ========================================================
-  # 3. 권한 부여 담당 스크립트
+  # 3. 권한 부여 스크립트
   # ========================================================
   03-perm.sh: |-
     #!/bin/bash
-    echo "Applying broad permissions..."
     chmod -R 777 /nfs
-    # DB 보안 권한 유지
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
-    # 🚀 [추가됨] 안랩 코어 폴더 소유권을 2500(epp user)으로 자동 정렬
-    echo "Aligning ownership to 2500:2500..."
     chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent 2>/dev/null || true
+ 
+  # ========================================================
+  # 🚀 [신규 분리] Spring Boot용 log4j2.xml 원본 데이터
+  # ========================================================
+  log4j2.xml: |-
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="INFO">
+<appenders>
+<Console name="Console" target="SYSTEM_OUT">
+<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+</Console>
+</appenders>
+<loggers>
+<root level="info">
+<appender-ref ref="Console"/>
+</root>
+</loggers>
+</configuration>
