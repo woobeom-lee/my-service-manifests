@@ -38,25 +38,11 @@ data:
       touch "$file"
     done
  
-    # 🚀 XML을 스크립트 내부에서 직접 생성 (YAML 파싱 에러 완벽 차단)
+    # 🚀 XML 파싱 에러 방지를 위한 Base64 암호화 주입 방식
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ -d "$LOG_XML" ]; then rm -rf "$LOG_XML"; fi
-    cat << 'XML_EOF' > "$LOG_XML"
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration status="INFO">
-<appenders>
-<Console name="Console" target="SYSTEM_OUT">
-<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-</Console>
-</appenders>
-<loggers>
-<root level="info">
-<appender-ref ref="Console"/>
-</root>
-</loggers>
-</configuration>
-    XML_EOF
+    echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gc3RhdHVzPSJJTkZPIj4KICA8YXBwZW5kZXJzPgogICAgPENvbnNvbGUgbmFtZT0iQ29uc29sZSIgdGFyZ2V0PSJTWVNURU1fT1VUIj4KICAgICAgPFBhdHRlcm5MYXlvdXQgcGF0dGVybj0iJWR7eXl5eS1NTS1kZCBISDptbTpzcy5TU1N9IFsldF0gJS01bGV2ZWwgJWxvZ2dlcnszNn0gLSAlbXNnJW4iLz4KICAgIDwvQ29uc29sZT4KICA8L2FwcGVuZGVycz4KICA8bG9nZ2Vycz4KICAgIDxyb290IGxldmVsPSJpbmZvIj4KICAgICAgPGFwcGVuZGVyLXJlZiByZWY9IkNvbnNvbGUiLz4KICAgIDwvcm9vdD4KICA8L2xvZ2dlcnM+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
