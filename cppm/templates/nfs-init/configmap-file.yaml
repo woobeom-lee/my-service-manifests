@@ -4,7 +4,7 @@ metadata:
   name: nfs-init-file-cm
 data:
   # ========================================================
-  # 메인 실행 파일 (아래 3개의 스크립트를 순서대로 실행만 함)
+  # 메인 실행 파일
   # ========================================================
   init.sh: |-
     #!/bin/bash
@@ -66,23 +66,22 @@ data:
       touch "$file"
     done
  
-    # (3) Java 애플리케이션용 log4j2.xml 자동 생성
+    # (3) Java 애플리케이션용 log4j2.xml 자동 생성 (vi 에러 방지용 echo 처리)
     mkdir -p /nfs/permanent/etc/config
-    cat << 'EOF' > /nfs/permanent/etc/config/log4j2.xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO">
-<Appenders>
-<Console name="Console" target="SYSTEM_OUT">
-<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n"/>
-</Console>
-</Appenders>
-<Loggers>
-<Root level="info">
-<AppenderRef ref="Console"/>
-</Root>
-</Loggers>
-</Configuration>
-    EOF
+    LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
+    echo '<?xml version="1.0" encoding="UTF-8"?>' > $LOG_XML
+    echo '<Configuration status="INFO">' >> $LOG_XML
+    echo '  <Appenders>' >> $LOG_XML
+    echo '    <Console name="Console" target="SYSTEM_OUT">' >> $LOG_XML
+    echo '      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n"/>' >> $LOG_XML
+    echo '    </Console>' >> $LOG_XML
+    echo '  </Appenders>' >> $LOG_XML
+    echo '  <Loggers>' >> $LOG_XML
+    echo '    <Root level="info">' >> $LOG_XML
+    echo '      <AppenderRef ref="Console"/>' >> $LOG_XML
+    echo '    </Root>' >> $LOG_XML
+    echo '  </Loggers>' >> $LOG_XML
+    echo '</Configuration>' >> $LOG_XML
     # (4) 로그 폴더 일괄 생성
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
