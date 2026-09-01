@@ -35,12 +35,9 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 1. DB 폴더 사전 생성 (경로 누락으로 인한 에러 방지)
               mkdir -p /database/15/cppoltpdata
-              # 2. 소유권 부여 (Postgres UID 2500)
               chown -R 2500:2500 /database
               chown -R 2500:2500 /var/run/postgresql
-              # 3. [핵심] Postgres 데이터 폴더 권한 700 강제 축소
               chmod 700 /database/15/cppoltpdata
       containers:
         - name: postgres

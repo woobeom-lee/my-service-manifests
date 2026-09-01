@@ -53,73 +53,9 @@ spec:
               echo "Fixing permissions for Redis mounted paths..."
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
           volumeMounts:
-            - name: tmpfs-ahnlab
-              mountPath: /opt/ahnlab
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/cpp
-              subPath: opt/ahnlab/cpp
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/ems
-              subPath: opt/ahnlab/ems
-            - name: vol-ahnfs-root
-              mountPath: /nosql
-              subPath: nosql
-            - name: vol-ahnfs-root
-              mountPath: /database
-              subPath: database
-            - name: vol-ahnfs-root
-              mountPath: /tmp
-              subPath: tmp
-            - name: vol-ahnfs-root
-              mountPath: /home
-              subPath: home
-            - name: vol-ahnfs-root
-              mountPath: /etc/fstab
-              subPath: etc/fstab
-            - name: vol-ahnfs-root
-              mountPath: /etc/sudoers
-              subPath: etc/sudoers
-            - name: vol-ahnfs-root
-              mountPath: /etc/login.defs
-              subPath: etc/login.defs
-            - name: vol-ahnfs-root
-              mountPath: /etc/cron.d
-              subPath: etc/cron.d
-            - name: vol-ahnfs-root
-              mountPath: /etc/cron.daily
-              subPath: etc/cron.daily
-            - name: vol-ahnfs-root
-              mountPath: /etc/crontab
-              subPath: etc/crontab
-            - name: vol-ahnfs-root
-              mountPath: /etc/logrotate.d
-              subPath: etc/logrotate.d
-            - name: vol-ahnfs-root
-              mountPath: /etc/rsyslog.d
-              subPath: etc/rsyslog.d
-            - name: vol-ahnfs-root
-              mountPath: /var/log
-              subPath: var/log
-            - name: vol-ahnfs-root
-              mountPath: /var/run/postgresql
-              subPath: var/run/postgresql
-            - name: vol-ahnfs-root
-              mountPath: /opt/repo
-              subPath: external/repo
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/install
-              subPath: external/install
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/update
-              subPath: external/update
-            - name: vol-ahnfs-root
-              mountPath: /permanent
-              subPath: permanent
-            - name: vol-ahnfs-root
-              mountPath: /new
-              subPath: external/new
-            - name: vol-host-log
-              mountPath: /var/host_log
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       containers:
         - name: epp-redis
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -142,86 +78,15 @@ spec:
             - name: JAVA_TOOL_OPTIONS
               value: "-Xms192m -Xmx192m -Dfile.encoding=UTF-8 -Dlogging.config=file:///permanent/etc/config/log4j2.xml -Dlog4j2.configurationFile=file:///permanent/etc/config/log4j2.xml   -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true  "
           volumeMounts:
-            - name: tmpfs-ahnlab
-              mountPath: /opt/ahnlab
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/cpp
-              subPath: opt/ahnlab/cpp
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/ems
-              subPath: opt/ahnlab/ems
-            - name: vol-ahnfs-root
-              mountPath: /nosql
-              subPath: nosql
-            - name: vol-ahnfs-root
-              mountPath: /database
-              subPath: database
-            - name: vol-ahnfs-root
-              mountPath: /tmp
-              subPath: tmp
-            - name: vol-ahnfs-root
-              mountPath: /home
-              subPath: home
-            - name: vol-ahnfs-root
-              mountPath: /etc/fstab
-              subPath: etc/fstab
-            - name: vol-ahnfs-root
-              mountPath: /etc/sudoers
-              subPath: etc/sudoers
-            - name: vol-ahnfs-root
-              mountPath: /etc/login.defs
-              subPath: etc/login.defs
-            - name: vol-ahnfs-root
-              mountPath: /etc/cron.d
-              subPath: etc/cron.d
-            - name: vol-ahnfs-root
-              mountPath: /etc/cron.daily
-              subPath: etc/cron.daily
-            - name: vol-ahnfs-root
-              mountPath: /etc/crontab
-              subPath: etc/crontab
-            - name: vol-ahnfs-root
-              mountPath: /etc/logrotate.d
-              subPath: etc/logrotate.d
-            - name: vol-ahnfs-root
-              mountPath: /etc/rsyslog.d
-              subPath: etc/rsyslog.d
-            - name: vol-ahnfs-root
-              mountPath: /var/log
-              subPath: var/log
-            - name: vol-ahnfs-root
-              mountPath: /var/run/postgresql
-              subPath: var/run/postgresql
-            - name: vol-ahnfs-root
-              mountPath: /opt/repo
-              subPath: external/repo
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/install
-              subPath: external/install
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/update
-              subPath: external/update
-            - name: vol-ahnfs-root
-              mountPath: /permanent
-              subPath: permanent
-            - name: vol-ahnfs-root
-              mountPath: /new
-              subPath: external/new
-            - name: vol-host-log
-              mountPath: /var/host_log
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       volumes:
-        - name: tmpfs-ahnlab
-          emptyDir:
-            medium: Memory
-            sizeLimit: 16Mi
-        - name: vol-ahnfs-root
+        - name: vol-docker-sock
           hostPath:
-            path: {{ .Values.global.ahnfsBasePath }}
-            type: Directory
-        - name: vol-host-log
-          hostPath:
-            path: /var/log
-            type: Directory
+            path: /var/run/docker.sock
+            type: Socket
+        {{- include "cppm.commonVolumes" . | nindent 8 }}
 ---
 apiVersion: v1
 kind: Service

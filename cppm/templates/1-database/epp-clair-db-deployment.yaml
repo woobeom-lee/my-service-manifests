@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: clair-db
-  # namespace는 helm install 시 지정한 이름으로 자동 주입됩니다.
   namespace: {{ .Release.Namespace }}
   labels:
     app: clair-db
@@ -17,11 +16,9 @@ spec:
         app: clair-db
     spec:
       nodeSelector:
-        # 단일 노드 고정 변수화
         kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       containers:
         - name: clair-db
-          # 레지스트리, 저장소, 태그를 분리하여 조립합니다.
           image: "ghcr.io/woobeom-lee/clair-db:latest"
           imagePullPolicy: {{ .Values.database.clairDb.image.pullPolicy }}
           ports:
@@ -32,7 +29,6 @@ spec:
       volumes:
         - name: vol-clair-sql
           hostPath:
-            # 호스트 볼륨의 기본 경로를 변수화합니다.
             path: {{ .Values.global.hostPathBase }}/permanent/clair/sql/clair2x-vuln-db.sql
             type: File
 ---

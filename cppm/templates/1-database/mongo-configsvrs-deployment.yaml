@@ -47,37 +47,9 @@ spec:
               mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
           volumeMounts:
-            - name: tmpfs-ahnlab
-              mountPath: /opt/ahnlab
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/cpp
-              subPath: opt/ahnlab/cpp
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/ems
-              subPath: opt/ahnlab/ems
-            - name: vol-ahnfs-root
-              mountPath: /nosql
-              subPath: nosql
-            - name: vol-ahnfs-root
-              mountPath: /database
-              subPath: database
-            - name: vol-ahnfs-root
-              mountPath: /tmp
-              subPath: tmp
-            - name: vol-ahnfs-root
-              mountPath: /home
-              subPath: home
-            - name: vol-ahnfs-root
-              mountPath: /var/log
-              subPath: var/log
-            - name: vol-ahnfs-root
-              mountPath: /var/run/postgresql
-              subPath: var/run/postgresql
-            - name: vol-ahnfs-root
-              mountPath: /permanent
-              subPath: permanent
-            - name: vol-host-log
-              mountPath: /var/host_log
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       containers:
         - name: epp-mongo-configsvr1
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -103,51 +75,10 @@ spec:
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
-            - name: tmpfs-ahnlab
-              mountPath: /opt/ahnlab
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/cpp
-              subPath: opt/ahnlab/cpp
-            - name: vol-ahnfs-root
-              mountPath: /opt/ahnlab/ems
-              subPath: opt/ahnlab/ems
-            - name: vol-ahnfs-root
-              mountPath: /nosql
-              subPath: nosql
-            - name: vol-ahnfs-root
-              mountPath: /database
-              subPath: database
-            - name: vol-ahnfs-root
-              mountPath: /tmp
-              subPath: tmp
-            - name: vol-ahnfs-root
-              mountPath: /home
-              subPath: home
-            - name: vol-ahnfs-root
-              mountPath: /var/log
-              subPath: var/log
-            - name: vol-ahnfs-root
-              mountPath: /var/run/postgresql
-              subPath: var/run/postgresql
-            - name: vol-ahnfs-root
-              mountPath: /permanent
-              subPath: permanent
-            - name: vol-host-log
-              mountPath: /var/host_log
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       volumes:
         - name: vol-docker-sock
           hostPath:
             path: /var/run/docker.sock
             type: Socket
-        - name: tmpfs-ahnlab
-          emptyDir:
-            medium: Memory
-            sizeLimit: 16Mi
-        - name: vol-ahnfs-root
-          hostPath:
-            path: {{ .Values.global.ahnfsBasePath }}
-            type: Directory
-        - name: vol-host-log
-          hostPath:
-            path: /var/log
-            type: Directory
+        {{- include "cppm.commonVolumes" . | nindent 8 }}
