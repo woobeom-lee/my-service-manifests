@@ -6,69 +6,87 @@ data:
   init.sh: |-
     #!/bin/bash
     echo "==== Starting On-Premise NFS Initialization ===="
-    # 1. 완벽한 압축 해제 스킵 조건 (최종 목적지 기준)
+    # 1. 완벽한 스킵 조건 (핵심 파일이 정위치에 있는지 확인)
     if [ -f "/nfs/opt/ahnlab/cpp/bin/setting/install_link.sh" ]; then
       echo "[SKIP] Core files are already extracted in the correct path."
     else
       echo "[RUN] Extracting setup files from /tools..."
+      # 디버깅: K8s가 tools 볼륨을 제대로 물고 있는지 확인
+      echo "Contents of /tools:"
+      ls -al /tools/
       if [ -f "/tools/cpp_setup.tar" ]; then
+        echo "Found cpp_setup.tar! Extracting to temp dir..."
         mkdir -p /tmp/setup_extract
         tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
         AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
         if [ -n "$AHNFS_TAR" ]; then
-          tar -zxvf "$AHNFS_TAR" -C /nfs/
+          echo "Found $AHNFS_TAR ! Extracting 1GB files to /nfs..."
+          # 압축을 /nfs 최상단에 풉니다.
+          tar -zxvf "$AHNFS_TAR" -C /nfs/ > /dev/null
+          echo "Extraction completed."
         else
           echo "[ERROR] ahnfs.tar.gz not found inside cpp_setup.tar!"
           exit 1
         fi
         rm -rf /tmp/setup_extract
       elif [ -f "/tools/ahnfs.tar.gz" ]; then
-        tar -zxvf /tools/ahnfs.tar.gz -C /nfs/
+        echo "Found ahnfs.tar.gz! Extracting to /nfs..."
+        tar -zxvf /tools/ahnfs.tar.gz -C /nfs/ > /dev/null
       else
         echo "[ERROR] Setup tar file not found in /tools directory!"
         exit 1
       fi
     fi
  
-    # 2. [추가됨] 파드들이 찾는 정확한 뼈대 경로 맞추기 자동화
+    # 2. [가장 중요한 핵심] 파드들이 찾는 정확한 뼈대 경로(/opt/ahnlab/cpp)로 강제 이동 자동화
     echo "Reorganizing directory structure for CPPM containers..."
     mkdir -p /nfs/opt/ahnlab/cpp
-    # 최상단에 잘못 풀린 경우 자동 이동
-    mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
-    # 이중 폴더(ahnfs/opt/ahnlab/cpp)로 풀린 경우 자동 이동
-    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then
-      mv /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+    # 케이스 A: 압축이 /nfs 최상단에 바로 풀린 경우
+    if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then
+      echo "Moving core files from /nfs root to /nfs/opt/ahnlab/cpp..."
+      mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
     fi
-    # 잔여 껍데기 폴더 병합 및 정리
+    # 케이스 B: 압축이 /nfs/ahnfs/opt/ahnlab/cpp 등 이중으로 꼬여서 풀린 경우
+    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then
+      echo "Moving core files from nested /nfs/ahnfs/opt/ahnlab/cpp..."
+      cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+    fi
+ 
+    # 최종 검증
+    if [ -f "/nfs/opt/ahnlab/cpp/bin/setting/install_link.sh" ]; then
+      echo "[SUCCESS] Directory structure verified! Core files are in place."
+    else
+      echo "[WARNING] Could not find install_link.sh in final path. Printing tree..."
+      find /nfs -maxdepth 3
+    fi
+ 
+    # 3. K8s 마운트 에러(not a directory) 완벽 방어 및 찌꺼기 정리
+    echo "Verifying and fixing mount files..."
     if [ -d "/nfs/ahnfs" ]; then
       mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true
       rm -rf /nfs/ahnfs
     fi
- 
-    # 3. K8s 마운트 에러(not a directory) 완벽 방어 로직
-    echo "Verifying and fixing mount files..."
+   
+    echo"creating empty log and config directories for java apps..."
+    mkdir -p /nfs/opt/ahnlab/cpp/log/cmd
+    mkdir -p /nfs/opt/ahnlab/cpp/log/batch-processor
+    mkdir -p /nfs/permanent/etc/config
+
+
+
     mkdir -p /nfs/etc
     mkdir -p /nfs/permanent/clair/sql
     mkdir -p /nfs/permanent/clair/config
  
-    FILES=(
-      "/nfs/etc/sudoers"
-      "/nfs/etc/login.defs"
-      "/nfs/etc/crontab"
-      "/nfs/permanent/clair/sql/clair2x-vuln-db.sql"
-      "/nfs/permanent/clair/config/config.yaml"
-    )
- 
+    FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
-      if [ -d "$file" ]; then
-        rm -rf "$file"
-      fi
+      if [ -d "$file" ]; then rm -rf "$file"; fi
       touch "$file"
     done
  
-    # 4. 넉넉한 기본 권한 부여
+    # 4. 권한 부여
+    echo "Applying broad permissions (777) to /nfs..."
     chmod -R 777 /nfs
-    # 5. PostgreSQL 보안 권한 예외 처리
     echo "Applying strict permissions (700) for PostgreSQL..."
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
  
