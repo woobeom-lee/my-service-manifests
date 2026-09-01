@@ -48,4 +48,9 @@ data:
  
     # 4. 넉넉한 권한 부여
     chmod -R 777 /nfs
+
+    # 5. PostgreSQL 보안 권한 예외 처리 (DB 폴더는 무조건 700이어야 기동됨)
+    echo "Applying strict permissions (700) for PostgreSQL data directory..."
+    find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
+
     echo "==== NFS Initialization Completed Successfully! ===="
