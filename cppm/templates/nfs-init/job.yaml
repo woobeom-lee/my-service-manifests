@@ -25,9 +25,10 @@ spec:
           command: [/bin/bash, /init/init.sh]
       volumes:
       - name: nfs
-        persistentVolumeClaim:
-          claimName: {{ .Release.Namespace }}-pvc
-      - name: {{ .Values.nfsInit.name }}-file-cm
+        hostPath:
+          path: {{ .Values.global.hostPathBase | default "/data/ahnfs" }}
+          type: DirectoryOrCreate
+      - name: {{ .Values.nfsInit.name }}-file-cm  
         configMap:
           name: {{ .Values.nfsInit.name }}-file-cm
           defaultMode: 0755
