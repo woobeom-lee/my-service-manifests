@@ -3,46 +3,25 @@ kind: ConfigMap
 metadata:
   name: nfs-init-file-cm
 data:
-  # ========================================================
-  # 메인 실행 파일
-  # ========================================================
   init.sh: |-
     #!/bin/bash
-    echo "==== 1. Extracting Setup Files ===="
     bash /init/01-extract.sh
-    echo "==== 2. Reorganizing & Fixing Mounts ===="
     bash /init/02-setup.sh
-    echo "==== 3. Applying Permissions ===="
     bash /init/03-perm.sh
-    echo "==== NFS Initialization Completed Successfully! ===="
  
-  # ========================================================
-  # 1. 압축 해제 스크립트
-  # ========================================================
   01-extract.sh: |-
     #!/bin/bash
-    if [ -f "/nfs/opt/ahnlab/cpp/bin/setting/install_link.sh" ]; then
-      echo "[SKIP] Core files are already extracted."
-      exit 0
-    fi
+    if [ -f "/nfs/opt/ahnlab/cpp/bin/setting/install_link.sh" ]; then exit 0; fi
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
-      if [ -n "$AHNFS_TAR" ]; then
-        tar -zxvf "$AHNFS_TAR" -C /nfs/ > /dev/null
-      fi
+      if [ -n "$AHNFS_TAR" ]; then tar -zxvf "$AHNFS_TAR" -C /nfs/ > /dev/null; fi
       rm -rf /tmp/setup_extract
     elif [ -f "/tools/ahnfs.tar.gz" ]; then
       tar -zxvf /tools/ahnfs.tar.gz -C /nfs/ > /dev/null
-    else
-      echo "[ERROR] Setup tar file not found!"
-      exit 1
     fi
  
-  # ========================================================
-  # 2. 경로 맞춤 & 설정 파일 복사 스크립트
-  # ========================================================
   02-setup.sh: |-
     #!/bin/bash
     mkdir -p /nfs/opt/ahnlab/cpp
@@ -64,42 +43,22 @@ data:
       touch "$file"
     done
  
-    # 🚀 ConfigMap에 분리된 원본 파일을 그대로 복사(cp)
-    echo "Copying log4j2.xml from ConfigMap..."
+    # 🚀 Helm이 불러온 파일 데이터를 제자리에 복사
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ -d "$LOG_XML" ]; then rm -rf "$LOG_XML"; fi
     cp /init/log4j2.xml "$LOG_XML"
-    echo "Creating log directories..."
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
-    echo "Generating dummy site.key..."
     echo "cppm-dummy-secure-key-1234567890" > /nfs/permanent/etc/config/site.key
  
-  # ========================================================
-  # 3. 권한 부여 스크립트
-  # ========================================================
   03-perm.sh: |-
     #!/bin/bash
     chmod -R 777 /nfs
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
     chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent 2>/dev/null || true
  
-  # ========================================================
-  # 🚀 Spring Boot용 log4j2.xml 원본 데이터
-  # ========================================================
+  # 🚀 Helm의 템플릿 엔진이 files 폴더의 원본을 읽어서 4칸 들여쓰기로 완벽하게 삽입합니다!
   log4j2.xml: |-
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration status="INFO">
-<appenders>
-<Console name="Console" target="SYSTEM_OUT">
-<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-</Console>
-</appenders>
-<loggers>
-<root level="info">
-<appender-ref ref="Console"/>
-</root>
-</loggers>
-</configuration>
+{{- .Files.Get "files/log4j2.xml" | nindent 4 }}
