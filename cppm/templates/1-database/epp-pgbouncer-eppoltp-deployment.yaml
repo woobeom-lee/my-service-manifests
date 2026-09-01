@@ -108,4 +108,3 @@ spec:
   ports:
     - port: 8819
       targetPort: 8819
-상황에 맞는 메뉴 있음
