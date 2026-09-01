@@ -22,13 +22,19 @@ spec:
             mountPath: /nfs
           - name: {{ .Values.nfsInit.name }}-file-cm
             mountPath: /init
+          - name: tools-vol
+            mountPath: /tools   # <--- 컨테이너 안에서 /tools 로 접근
           command: [/bin/bash, /init/init.sh]
       volumes:
       - name: nfs
         hostPath:
           path: {{ .Values.global.hostPathBase | default "/data/ahnfs" }}
           type: DirectoryOrCreate
-      - name: {{ .Values.nfsInit.name }}-file-cm  
+      - name: tools-vol         # <--- 호스트 물리 서버의 tools 폴더 연결
+        hostPath:
+          path: /home/registry/my-service-manifests/cppm/tools
+          type: Directory
+      - name: {{ .Values.nfsInit.name }}-file-cm
         configMap:
           name: {{ .Values.nfsInit.name }}-file-cm
           defaultMode: 0755
