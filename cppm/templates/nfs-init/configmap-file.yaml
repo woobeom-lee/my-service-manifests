@@ -66,9 +66,10 @@ data:
       touch "$file"
     done
  
-    # (3) Java 애플리케이션용 log4j2.xml 자동 생성 (vi 에러 방지용 echo 처리)
+    # (3) Java 애플리케이션용 log4j2.xml 자동 생성
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
+    if [ -d "$LOG_XML" ]; then rm -rf "$LOG_XML"; fi
     echo '<?xml version="1.0" encoding="UTF-8"?>' > $LOG_XML
     echo '<Configuration status="INFO">' >> $LOG_XML
     echo '  <Appenders>' >> $LOG_XML
@@ -82,13 +83,27 @@ data:
     echo '    </Root>' >> $LOG_XML
     echo '  </Loggers>' >> $LOG_XML
     echo '</Configuration>' >> $LOG_XML
-    # (4) 로그 폴더 일괄 생성
+    # 🚀 [추가됨] (4) Kubelet이 만든 가짜 log '파일' 파괴 후 폴더 일괄 생성
+    echo "Creating log directories..."
+    if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then
+      echo "Removing dummy log file created by Kubelet..."
+      rm -f /nfs/opt/ahnlab/cpp/log
+    fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
+ 
+    # 🚀 [추가됨] (5) Java 보안 모듈 기동을 위한 가짜 site.key 자동 생성
+    echo "Generating dummy site.key..."
+    echo "cppm-dummy-secure-key-1234567890" > /nfs/permanent/etc/config/site.key
  
   # ========================================================
   # 3. 권한 부여 담당 스크립트
   # ========================================================
   03-perm.sh: |-
     #!/bin/bash
+    echo "Applying broad permissions..."
     chmod -R 777 /nfs
+    # DB 보안 권한 유지
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
+    # 🚀 [추가됨] 안랩 코어 폴더 소유권을 2500(epp user)으로 자동 정렬
+    echo "Aligning ownership to 2500:2500..."
+    chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent 2>/dev/null || true
