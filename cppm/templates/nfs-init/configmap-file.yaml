@@ -6,26 +6,21 @@ data:
   init.sh: |-
     #!/bin/bash
     echo "==== Starting On-Premise NFS Initialization ===="
-    # 1. 완벽한 압축 해제 스킵 조건
-    if [ -f "/nfs/bin/setting/install_link.sh" ] || [ -f "/nfs/ahnfs/bin/setting/install_link.sh" ]; then
-      echo "[SKIP] Core files are already extracted."
+    # 1. 완벽한 압축 해제 스킵 조건 (최종 목적지 기준)
+    if [ -f "/nfs/opt/ahnlab/cpp/bin/setting/install_link.sh" ]; then
+      echo "[SKIP] Core files are already extracted in the correct path."
     else
       echo "[RUN] Extracting setup files from /tools..."
       if [ -f "/tools/cpp_setup.tar" ]; then
-        # 1-1. 이중 압축 해제를 위한 임시 작업 공간 생성
         mkdir -p /tmp/setup_extract
-        echo "Extracting cpp_setup.tar to temp directory..."
         tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
-        # 1-2. 풀려난 파일들 중에서 ahnfs.tar.gz 찾기
         AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
         if [ -n "$AHNFS_TAR" ]; then
-          echo "Found $AHNFS_TAR ! Extracting to /nfs..."
           tar -zxvf "$AHNFS_TAR" -C /nfs/
         else
           echo "[ERROR] ahnfs.tar.gz not found inside cpp_setup.tar!"
           exit 1
         fi
-        # 1-3. 임시 작업 공간 청소
         rm -rf /tmp/setup_extract
       elif [ -f "/tools/ahnfs.tar.gz" ]; then
         tar -zxvf /tools/ahnfs.tar.gz -C /nfs/
@@ -35,10 +30,18 @@ data:
       fi
     fi
  
-    # 2. 이중 폴더(ahnfs/ahnfs) 정리
+    # 2. [추가됨] 파드들이 찾는 정확한 뼈대 경로 맞추기 자동화
+    echo "Reorganizing directory structure for CPPM containers..."
+    mkdir -p /nfs/opt/ahnlab/cpp
+    # 최상단에 잘못 풀린 경우 자동 이동
+    mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+    # 이중 폴더(ahnfs/opt/ahnlab/cpp)로 풀린 경우 자동 이동
+    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then
+      mv /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+    fi
+    # 잔여 껍데기 폴더 병합 및 정리
     if [ -d "/nfs/ahnfs" ]; then
-      echo "Cleaning up nested ahnfs directory..."
-      mv /nfs/ahnfs/* /nfs/
+      mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true
       rm -rf /nfs/ahnfs
     fi
  
