@@ -64,7 +64,7 @@ data:
       touch "$file"
     done
  
-    # 🚀 [핵심 수정] 무식한 echo 대신 ConfigMap에 분리된 원본 파일을 그대로 복사(cp)
+    # 🚀 ConfigMap에 분리된 원본 파일을 그대로 복사(cp)
     echo "Copying log4j2.xml from ConfigMap..."
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
@@ -87,7 +87,7 @@ data:
     chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent 2>/dev/null || true
  
   # ========================================================
-  # 🚀 [신규 분리] Spring Boot용 log4j2.xml 원본 데이터
+  # 🚀 Spring Boot용 log4j2.xml 원본 데이터
   # ========================================================
   log4j2.xml: |-
 <?xml version="1.0" encoding="UTF-8"?>
