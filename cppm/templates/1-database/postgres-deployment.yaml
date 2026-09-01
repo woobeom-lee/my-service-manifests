@@ -35,13 +35,13 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              # 1. DB 폴더 사전 생성 (경로 누락으로 인한 에러 방지)
+              mkdir -p /database/15/cppoltpdata
+              # 2. 소유권 부여 (Postgres UID 2500)
               chown -R 2500:2500 /database
               chown -R 2500:2500 /var/run/postgresql
-          volumeMounts:
-            - name: vol-database
-              mountPath: /database
-            - name: vol-var-postgres
-              mountPath: /var/run/postgresql
+              # 3. [핵심] Postgres 데이터 폴더 권한 700 강제 축소
+              chmod 700 /database/15/cppoltpdata
       containers:
         - name: postgres
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -64,12 +64,11 @@ spec:
                   - |
                     for i in {1..30}; do
                       if psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "SELECT 1;" > /dev/null 2>&1; then
-                        echo "Database is ready. Executing license offline bypass queries..."
+                        echo "Database is ready. Executing license bypass queries..."
                         psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
                         psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
                         break
                       fi
-                      echo "Waiting for PostgreSQL to start..."
                       sleep 2
                     done
           volumeMounts:
@@ -81,7 +80,7 @@ spec:
         - name: vol-database
           hostPath:
             path: {{ .Values.global.ahnfsBasePath }}/database
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-var-postgres
           hostPath:
             path: {{ .Values.global.ahnfsBasePath }}/var/run/postgresql
