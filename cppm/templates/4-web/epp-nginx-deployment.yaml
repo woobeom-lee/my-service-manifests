@@ -83,7 +83,7 @@ spec:
  
       containers:
         - name: epp-nginx
-          image: ghr.io/woobeom-lee/cpp-nginx:1.28.2-1
+          image: ghcr.io/woobeom-lee/cpp-nginx:1.28.2-1
           imagePullPolicy: IfNotPresent
           command: ["nginx", "-g", "daemon off;"]
           securityContext:
