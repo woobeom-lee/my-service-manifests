@@ -5,9 +5,9 @@ metadata:
   name: {{ .Values.dbInit.name }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    helm.sh/hook: pre-install
+    helm.sh/hook: post-install
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/sync-wave: "5"
     argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   template:
