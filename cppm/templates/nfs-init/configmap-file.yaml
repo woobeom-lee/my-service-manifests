@@ -6,13 +6,15 @@ data:
   init.sh: |-
     #!/bin/bash
     echo "==== Starting On-Premise NFS Initialization ===="
-    # 1. 압축 해제 로직
-    if [ -f "/nfs/etc/sudoers" ] && [ -d "/nfs/permanent" ]; then
-      echo "[SKIP] Host directory is already prepped manually."
+    # 1. 완벽한 압축 해제 스킵 조건 (가장 핵심인 코어 스크립트가 존재하는지로 판단!)
+    if [ -f "/nfs/bin/setting/install_link.sh" ]; then
+      echo "[SKIP] Core files are already extracted."
     else
       echo "[RUN] Extracting ahnfs.tar.gz..."
       if [ -f /data/ahnfs.tar.gz ]; then
         tar -zxvf /data/ahnfs.tar.gz -C /nfs/
+      else
+        echo "[ERROR] ahnfs.tar.gz not found in /data!"
       fi
     fi
  
@@ -22,13 +24,12 @@ data:
       rm -rf /nfs/ahnfs
     fi
  
-    # 3. K8s 마운트 에러(not a directory) 완벽 방어 로직 (crontab 추가)
+    # 3. K8s 마운트 에러(not a directory) 완벽 방어 로직
     echo "Verifying and fixing mount files..."
     mkdir -p /nfs/etc
     mkdir -p /nfs/permanent/clair/sql
     mkdir -p /nfs/permanent/clair/config
  
-    # 필수 파일 목록 정의 (K8s가 폴더로 만들면 에러나는 녀석들)
     FILES=(
       "/nfs/etc/sudoers"
       "/nfs/etc/login.defs"
@@ -37,20 +38,18 @@ data:
       "/nfs/permanent/clair/config/config.yaml"
     )
  
-    # 폴더로 잘못 생성된게 있으면 삭제하고, 무조건 '파일(touch)'로 덮어쓰기
     for file in "${FILES[@]}"; do
       if [ -d "$file" ]; then
-        echo "Removing invalid directory created by K8s: $file"
+        echo "Removing invalid directory: $file"
         rm -rf "$file"
       fi
       touch "$file"
     done
  
-    # 4. 넉넉한 권한 부여
+    # 4. 넉넉한 기본 권한 부여
     chmod -R 777 /nfs
-
     # 5. PostgreSQL 보안 권한 예외 처리 (DB 폴더는 무조건 700이어야 기동됨)
-    echo "Applying strict permissions (700) for PostgreSQL data directory..."
+    echo "Applying strict permissions (700) for PostgreSQL..."
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
-
+ 
     echo "==== NFS Initialization Completed Successfully! ===="
