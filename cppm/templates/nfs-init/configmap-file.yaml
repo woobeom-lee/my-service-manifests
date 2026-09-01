@@ -28,13 +28,8 @@ data:
     if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then
       mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
     fi
-    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then
-      cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
-    fi
-    if [ -d "/nfs/ahnfs" ]; then
-      mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true
-      rm -rf /nfs/ahnfs
-    fi
+    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
+    if [ -d "/nfs/ahnfs" ]; then mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true; rm -rf /nfs/ahnfs; fi
  
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
@@ -43,22 +38,30 @@ data:
       touch "$file"
     done
  
-    # 🚀 Helm이 불러온 파일 데이터를 제자리에 복사
+    # 🚀 XML을 스크립트 내부에서 직접 생성 (YAML 파싱 에러 완벽 차단)
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ -d "$LOG_XML" ]; then rm -rf "$LOG_XML"; fi
-    cp /init/log4j2.xml "$LOG_XML"
+    cat << 'XML_EOF' > "$LOG_XML"
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="INFO">
+<appenders>
+<Console name="Console" target="SYSTEM_OUT">
+<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+</Console>
+</appenders>
+<loggers>
+<root level="info">
+<appender-ref ref="Console"/>
+</root>
+</loggers>
+</configuration>
+    XML_EOF
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
- 
-    echo "cppm-dummy-secure-key-1234567890" > /nfs/permanent/etc/config/site.key
  
   03-perm.sh: |-
     #!/bin/bash
     chmod -R 777 /nfs
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
     chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent 2>/dev/null || true
- 
-  # 🚀 Helm의 템플릿 엔진이 files 폴더의 원본을 읽어서 4칸 들여쓰기로 완벽하게 삽입합니다!
-  log4j2.xml: |-
-{{- .Files.Get "files/log4j2.xml" | nindent 4 }}
