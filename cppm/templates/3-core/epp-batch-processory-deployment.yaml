@@ -28,15 +28,15 @@ spec:
       hostAliases:
         - ip: "10.128.88.28"
           hostnames:
-            - "cpp-server"
-            - "epp-pgbouncer-eppoltp"
-            - "epp-postgres-eppoltp"
-            - "epp-mgr"
-            - "cpp-tomcat-auth"
-            - "cpp-tomcat-console"
+           #- "cpp-server"
+           #- "epp-pgbouncer-eppoltp"
+           #- "epp-postgres-eppoltp"
+           #- "epp-mgr"
+           #- "cpp-tomcat-auth"
+           #- "cpp-tomcat-console"
             - "host.docker.internal"
-            - "cpp-nginx"
-            - "cpp-scheduler"
+           # - "cpp-nginx"
+           # - "cpp-scheduler"
       initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
