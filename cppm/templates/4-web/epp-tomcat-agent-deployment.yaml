@@ -28,6 +28,8 @@ spec:
       hostAliases:
         - ip: "10.128.88.28"
           hostnames:
+            - "cpp-server"
+            - "epp-pgbouncer-eppoltp"
             - "epp-postgres-eppoltp"
             - "epp-mgr"
             - "cpp-tomcat-auth"
