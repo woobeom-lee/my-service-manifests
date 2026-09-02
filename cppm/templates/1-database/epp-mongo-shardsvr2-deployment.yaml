@@ -22,7 +22,6 @@ spec:
       hostAliases:
         - ip: {{ .Values.global.masterIp | quote }}
           hostnames: []
-      # 🚀 파드 스스로 3번 전용 스크립트로 치환(sed)하여 데이터 폴더 충돌 방지
       initContainers:
         - name: init-shard-script
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -32,10 +31,11 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "Patching Mongo Shardsvr scripts for Shard 3..."
+              echo "Patching Mongo Shardsvr scripts for Shard 2..."
               if [ -f /nosql/cmd/epp-mongo-shardsvr.sh ]; then
-                sed 's/shardsvr/shardsvr2/g' /nosql/cmd/epp-mongo-shardsvr.sh > /nosql/cmd/epp-mongo-shardsvr2.sh || true
-                sed 's/shardsvr/shardsvr2/g' /nosql/conf/epp-mongo-shardsvr.conf > /nosql/conf/epp-mongo-shardsvr2.conf || true
+                # 🚀 수정됨: 옵션은 놔두고 '/shardsvr' 경로만 정확히 '/shardsvr2'로 변경
+                sed 's|/shardsvr|/shardsvr2|g' /nosql/cmd/epp-mongo-shardsvr.sh > /nosql/cmd/epp-mongo-shardsvr2.sh || true
+                sed 's|/shardsvr|/shardsvr2|g' /nosql/conf/epp-mongo-shardsvr.conf > /nosql/conf/epp-mongo-shardsvr2.conf || true
                 chown 2500:2500 /nosql/cmd/epp-mongo-shardsvr2.sh /nosql/conf/epp-mongo-shardsvr2.conf || true
                 chmod +x /nosql/cmd/epp-mongo-shardsvr2.sh || true
               fi
