@@ -11,6 +11,14 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
+    # 🚀 [추가됨] Kubelet subPath 버그(파일을 디렉토리로 착각해 생성) 자동 치유 로직
+    echo "Cleaning up Kubelet subPath ghost directories..."
+    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/fstab; do
+      if [ -d "$BAD_DIR" ]; then
+        echo " - Removing ghost directory: $BAD_DIR"
+        rm -rf "$BAD_DIR"
+      fi
+    done
     if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -f "/nfs/permanent/etc/config/site.key" ]; then
       echo "[SKIP] Original AhnLab files are already extracted."
       exit 0
@@ -19,7 +27,7 @@ data:
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract /tmp/ahnfs_ext
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
-      # 🚀 인증서 스크립트(site.key 생성) 구동을 위해 install 폴더 전체를 통째로 복사합니다.
+      # 인증서 스크립트(site.key 생성) 구동을 위해 install 폴더 전체를 통째로 복사합니다.
       INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
       if [ -n "$INSTALL_DIR" ]; then
         mkdir -p /nfs/opt/ahnlab/cpp
@@ -33,6 +41,7 @@ data:
         PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
         if [ -n "$PERM_DIR" ]; then
           BASE_DIR=$(dirname "$PERM_DIR")
+          # 가짜 디렉토리를 위에서 삭제했으므로, 이제 덮어쓰기 에러 없이 깔끔하게 복사됩니다.
           cp -a "$BASE_DIR"/* /nfs/
         fi
       fi
@@ -57,7 +66,6 @@ data:
  
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
  
-    # 🚀 드디어 이 스크립트가 온전히 실행되어 site.key를 정상 발급합니다.
     CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
     if [ -f "$CERT_SCRIPT" ]; then
       export storage_dir=/nfs
