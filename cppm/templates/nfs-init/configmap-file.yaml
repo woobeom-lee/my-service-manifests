@@ -23,7 +23,6 @@ data:
       if [ -n "$AHNFS_TAR" ]; then
         echo "Found ahnfs.tar.gz at: $AHNFS_TAR. Extracting..."
         tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
-        # 🚀 압축 구조가 어떻든 간에 'permanent' 폴더를 샅샅이 뒤져서 찾아냅니다.
         PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
         if [ -n "$PERM_DIR" ]; then
           BASE_DIR=$(dirname "$PERM_DIR")
@@ -72,6 +71,25 @@ data:
     fi
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
+ 
+    # 🚀 [신규 추가 1] Kafka 파티션 롤(Role) 파일 생성 (기본값 1)
+    echo "Creating Kafka role config..."
+    mkdir -p /nfs/permanent/save
+    echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
+ 
+    # 🚀 [신규 추가 2] 내부 인증서 자동 갱신 스크립트 실행
+    CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
+    if [ -f "$CERT_SCRIPT" ]; then
+      echo "Running AhnLab Certificate Update Script..."
+      # 원본 스크립트가 참조하는 환경변수(storage_dir)를 맞물려줌
+      export storage_dir=/nfs
+      # 스크립트 실행 권한 부여 후 실행 (에러가 나도 init이 중단되지 않도록 || true 추가)
+      chmod +x "$CERT_SCRIPT"
+      bash "$CERT_SCRIPT" install || true
+      echo "Certificate Update Completed."
+    else
+      echo "[WARNING] Certificate script not found at $CERT_SCRIPT"
+    fi
  
   03-perm.sh: |-
     #!/bin/bash
