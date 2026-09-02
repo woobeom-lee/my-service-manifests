@@ -11,7 +11,6 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
-    # 원본 파일이 존재하면 압축 해제 스킵
     if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -d "/nfs/opt/ahnlab/cpp/bin/setting" ]; then
       echo "[SKIP] Original AhnLab files are already extracted."
       exit 0
@@ -20,6 +19,13 @@ data:
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract /tmp/ahnfs_ext
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
+      # 🚀 [자동화 1] bin, cmd, setting, version.ini 폴더를 찾아 K8s 정위치로 자동 이식
+      INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
+      if [ -n "$INSTALL_DIR" ]; then
+        mkdir -p /nfs/opt/ahnlab/cpp
+        cp -r "$INSTALL_DIR"/bin "$INSTALL_DIR"/cmd "$INSTALL_DIR"/setting "$INSTALL_DIR"/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+      fi
+ 
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
       if [ -n "$AHNFS_TAR" ]; then
         tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
@@ -30,31 +36,17 @@ data:
         fi
       fi
       rm -rf /tmp/setup_extract /tmp/ahnfs_ext
-    elif [ -f "/tools/ahnfs.tar.gz" ]; then
-      mkdir -p /tmp/ahnfs_ext
-      tar -zxf /tools/ahnfs.tar.gz -C /tmp/ahnfs_ext/
-      PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
-      if [ -n "$PERM_DIR" ]; then
-        BASE_DIR=$(dirname "$PERM_DIR")
-        cp -a "$BASE_DIR"/* /nfs/
-      fi
-      rm -rf /tmp/ahnfs_ext
     fi
  
   02-setup.sh: |-
     #!/bin/bash
-    mkdir -p /nfs/opt/ahnlab/cpp
-    if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
-    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
-    if [ -d "/nfs/ahnfs" ]; then mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true; rm -rf /nfs/ahnfs; fi
- 
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
       if [ ! -f "$file" ]; then touch "$file"; fi
     done
  
-    # 🚀 완벽한 Logback 형태의 XML 주입
+    # 완벽한 Logback 형태의 XML 주입
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ ! -f "$LOG_XML" ]; then
@@ -72,7 +64,7 @@ data:
       bash "$CERT_SCRIPT" install || true
     fi
  
-    # 🚀 Mongo Shard 2, 3번 스크립트 복제
+    # Mongo Shard 2, 3번 스크립트 복제
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
@@ -86,6 +78,7 @@ data:
     #!/bin/bash
     chmod -R 777 /nfs
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
-    chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
+    chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home /nfs/opt/ahnlab/cpp/bin /nfs/opt/ahnlab/cpp/setting 2>/dev/null || true
+    # 🚀 [자동화 2] PgBouncer를 살리기 위한 sudoers 권한 수정 (필수)
     chmod 440 /nfs/etc/sudoers 2>/dev/null || true
     chmod 440 /nfs/etc/login.defs 2>/dev/null || true
