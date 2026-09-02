@@ -2,6 +2,11 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nfs-init-file-cm
+  namespace: {{ .Release.Namespace }}
+  # 🚀 [추가됨] Job과 세트로 움직이도록 ConfigMap에도 PreSync 훅 부여!
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    helm.sh/hook: pre-install,pre-upgrade
 data:
   init.sh: |-
     #!/bin/bash
@@ -35,6 +40,10 @@ data:
         PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
         if [ -n "$PERM_DIR" ]; then
           BASE_DIR=$(dirname "$PERM_DIR")
+          echo "Aggressively removing Kubelet ghost directories before copy..."
+          for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/fstab /nfs/permanent/clair/config/config.yaml /nfs/permanent/clair/sql/clair2x-vuln-db.sql; do
+            if [ -d "$BAD_DIR" ]; then rm -rf "$BAD_DIR"; fi
+          done
           cp -a "$BASE_DIR"/* /nfs/
         fi
       fi
@@ -44,6 +53,10 @@ data:
   02-setup.sh: |-
     #!/bin/bash
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
+    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/permanent/clair/config/config.yaml /nfs/permanent/clair/sql/clair2x-vuln-db.sql; do
+      if [ -d "$BAD_DIR" ]; then rm -rf "$BAD_DIR"; fi
+    done
+ 
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
       if [ ! -f "$file" ]; then touch "$file"; fi
@@ -54,12 +67,9 @@ data:
     if [ ! -f "$LOG_XML" ]; then
       echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     fi
- 
-    # 🚀 [치유 1] 꼬여있는 로그 폴더 강제 포맷 및 재생성
     rm -rf /nfs/opt/ahnlab/cpp/log
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
-    # 🚀 [치유 2] Extract SKIP 여부와 상관없이 필수 앱 폴더 절대 복사 보장
     if [ -d "/nfs/opt/ahnlab/install" ]; then
       cp -a /nfs/opt/ahnlab/install/bin /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
       cp -a /nfs/opt/ahnlab/install/cmd /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
@@ -69,19 +79,15 @@ data:
  
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
  
-    # 🚀 [치유 3] 경로 충돌 방지를 위한 심볼릭 링크 초기화
     rm -rf /nfs/ahnfs /opt/ahnfs
     ln -s /nfs /nfs/ahnfs
-    mkdir -p /opt
-    ln -s /nfs /opt/ahnfs
-    # 🚀 [치유 4] 완벽한 가짜 Docker 엔진 이식 (DB 대기 루프 즉시 패스)
+    mkdir -p /opt && ln -s /nfs /opt/ahnfs
     echo '#!/bin/bash' > /usr/bin/docker
     echo 'exit 0' >> /usr/bin/docker
     chmod +x /usr/bin/docker
     cp /usr/bin/docker /bin/docker
     cp /usr/bin/docker /usr/local/bin/docker
  
-    # 인증서 발급 스크립트 실행
     CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
     if [ -f "$CERT_SCRIPT" ]; then
       export storage_dir=/nfs
@@ -90,7 +96,6 @@ data:
     fi
     rm -f /nfs/ahnfs /opt/ahnfs
  
-    # Mongo Shard 스크립트 복제
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh

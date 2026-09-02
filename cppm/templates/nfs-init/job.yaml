@@ -1,41 +1,49 @@
-{{- if .Values.nfsInit.enabled -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Values.nfsInit.name }}
+  name: nfs-init
   namespace: {{ .Release.Namespace }}
+  # 🚀 [추가됨] 이 Job이 클러스터에서 가장 먼저 단독으로 실행되도록 강제
   annotations:
-    helm.sh/hook: pre-install
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/sync-wave: "-4"
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
 spec:
+  backoffLimit: 1
   template:
+    metadata:
+      name: nfs-init
     spec:
-      restartPolicy: {{ .Values.nfsInit.restartPolicy | default "OnFailure" }}
+      restartPolicy: Never
       containers:
-        - name: {{ .Values.nfsInit.name }}
-          image: {{ .Values.nfsInit.repository }}:{{ .Values.nfsInit.version }}
-          imagePullPolicy: {{ .Values.nfsInit.pullPolicy | default "IfNotPresent" }}
+        - name: nfs-init
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "/init/init.sh"
           volumeMounts:
-          - name: nfs
-            mountPath: /nfs
-          - name: {{ .Values.nfsInit.name }}-file-cm
-            mountPath: /init
-          - name: tools-vol
-            mountPath: /tools   # <--- 컨테이너 안에서 /tools 로 접근
-          command: [/bin/bash, /init/init.sh]
+            - name: vol-ahnfs-root
+              mountPath: /nfs
+            - name: vol-init-script
+              mountPath: /init
+            - name: vol-tools
+              mountPath: /tools
       volumes:
-      - name: nfs
-        hostPath:
-          path: {{ .Values.global.hostPathBase | default "/data/ahnfs" }}
-          type: DirectoryOrCreate
-      - name: tools-vol         # <--- 호스트 물리 서버의 tools 폴더 연결
-        hostPath:
-          path: /home/registry/my-service-manifests/cppm/tools
-          type: Directory
-      - name: {{ .Values.nfsInit.name }}-file-cm
-        configMap:
-          name: {{ .Values.nfsInit.name }}-file-cm
-          defaultMode: 0755
-{{- end }}
+        - name: vol-ahnfs-root
+          hostPath:
+            path: {{ .Values.global.ahnfsBasePath }}
+            type: DirectoryOrCreate
+        - name: vol-init-script
+          configMap:
+            name: nfs-init-file-cm
+            defaultMode: 0777
+        - name: vol-tools
+          hostPath:
+            # 원본 cpp_setup.tar 또는 ahnfs.tar.gz가 존재하는 호스트 경로 (기존 설정 유지)
+            path: /home/ubuntu/cpp_installer/cpp_setup
+            type: DirectoryOrCreate
