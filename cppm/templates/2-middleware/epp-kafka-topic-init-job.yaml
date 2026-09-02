@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: epp-kafka-topic-init
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    # Kafka Deployment가 생성된 이후에 이 Job이 실행되도록 순서 보장 (ArgoCD 훅)
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  # 실패 시 5번 재시도 후 포기
+  backoffLimit: 5
+  template:
+    metadata:
+      name: epp-kafka-topic-init
+    spec:
+      restartPolicy: OnFailure
+      # 🚀 1단계: Kafka 서버가 뜰 때까지 무한 대기 (Init Container)
+      initContainers:
+        - name: wait-for-kafka
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "Waiting for Kafka broker (epp-kafka:9092) to be ready..."
+              until true || timeout 1 bash -c "</dev/tcp/epp-kafka/9092" 2>/dev/null; do
+                echo "Kafka is not ready yet. Retrying in 5 seconds..."
+                sleep 5
+              done
+              echo "Kafka is up and running! Proceeding to topic initialization."
+      # 🚀 2단계: Kafka 서버가 켜지면 토픽 생성 스크립트 실행 (Main Container)
+      containers:
+        - name: kafka-topic-init
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          securityContext:
+            runAsUser: 2500
+          env:
+            - name: KAFKA_PARTITION_COUNT
+              value: "1"
+            - name: VOLUME_ROOT
+              value: "/permanent"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "==== Starting AhnLab Kafka Topic Initialization ===="
+              # 기존 docker-compose에서 사용하던 init 및 setup 스크립트를 찾아 직접 실행
+              KAFKA_DIR="/opt/ahnlab/cpp/service/kafka"
+              if [ -f "$KAFKA_DIR/bin/init.sh" ]; then
+                echo "Running Kafka init.sh..."
+                bash $KAFKA_DIR/bin/init.sh
+              fi
+              if [ -f "$KAFKA_DIR/bin/setup.sh" ]; then
+                echo "Running Kafka setup.sh..."
+                bash $KAFKA_DIR/bin/setup.sh
+              fi
+              echo "==== Kafka Topic Initialization Completed Successfully ===="
+          volumeMounts:
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "cppm.commonVolumes" . | nindent 8 }}
