@@ -3,7 +3,6 @@ kind: ConfigMap
 metadata:
   name: nfs-init-file-cm
   namespace: {{ .Release.Namespace }}
-  # 🚀 [추가됨] Job과 세트로 움직이도록 ConfigMap에도 PreSync 훅 부여!
   annotations:
     argocd.argoproj.io/hook: PreSync
     helm.sh/hook: pre-install,pre-upgrade
@@ -16,8 +15,8 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
-    echo "Cleaning up Kubelet subPath ghost directories..."
-    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/fstab; do
+    echo "Cleaning up Kubelet ghost directories..."
+    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/fstab /nfs/permanent/clair/config/config.yaml /nfs/permanent/clair/sql/clair2x-vuln-db.sql; do
       if [ -d "$BAD_DIR" ]; then rm -rf "$BAD_DIR"; fi
     done
     if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -f "/nfs/permanent/etc/config/site.key" ]; then
@@ -28,24 +27,20 @@ data:
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract /tmp/ahnfs_ext
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
-      INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
-      if [ -n "$INSTALL_DIR" ]; then
-        mkdir -p /nfs/opt/ahnlab/cpp
-        cp -a "$INSTALL_DIR" /nfs/opt/ahnlab/
-      fi
- 
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
       if [ -n "$AHNFS_TAR" ]; then
         tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
-        PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
-        if [ -n "$PERM_DIR" ]; then
-          BASE_DIR=$(dirname "$PERM_DIR")
-          echo "Aggressively removing Kubelet ghost directories before copy..."
-          for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/fstab /nfs/permanent/clair/config/config.yaml /nfs/permanent/clair/sql/clair2x-vuln-db.sql; do
-            if [ -d "$BAD_DIR" ]; then rm -rf "$BAD_DIR"; fi
-          done
-          cp -a "$BASE_DIR"/* /nfs/
+        if [ -d "/tmp/ahnfs_ext/ahnfs" ]; then
+          cp -a /tmp/ahnfs_ext/ahnfs/* /nfs/
+        else
+          cp -a /tmp/ahnfs_ext/* /nfs/
         fi
+      fi
+      # 🚀 인증서 스크립트 실행을 위해 백업본 강제 이식
+      INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
+      if [ -n "$INSTALL_DIR" ]; then
+        mkdir -p /nfs/opt/ahnlab
+        cp -a "$INSTALL_DIR" /nfs/opt/ahnlab/
       fi
       rm -rf /tmp/setup_extract /tmp/ahnfs_ext
     fi
@@ -53,10 +48,6 @@ data:
   02-setup.sh: |-
     #!/bin/bash
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
-    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/permanent/clair/config/config.yaml /nfs/permanent/clair/sql/clair2x-vuln-db.sql; do
-      if [ -d "$BAD_DIR" ]; then rm -rf "$BAD_DIR"; fi
-    done
- 
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
       if [ ! -f "$file" ]; then touch "$file"; fi
@@ -67,21 +58,23 @@ data:
     if [ ! -f "$LOG_XML" ]; then
       echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     fi
-    rm -rf /nfs/opt/ahnlab/cpp/log
-    mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
- 
-    if [ -d "/nfs/opt/ahnlab/install" ]; then
+    # 🚀 epp_common.sh 누락 방지: install 폴더에서 강제 복구
+    if [ -d "/nfs/opt/ahnlab/install/bin" ]; then
+      mkdir -p /nfs/opt/ahnlab/cpp
       cp -a /nfs/opt/ahnlab/install/bin /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
       cp -a /nfs/opt/ahnlab/install/cmd /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
       cp -a /nfs/opt/ahnlab/install/setting /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
-      cp -a /nfs/opt/ahnlab/install/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
     fi
+ 
+    rm -rf /nfs/opt/ahnlab/cpp/log
+    mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
  
+    echo "storage=/nfs" > /nfs/.epp_storage_path
     rm -rf /nfs/ahnfs /opt/ahnfs
-    ln -s /nfs /nfs/ahnfs
-    mkdir -p /opt && ln -s /nfs /opt/ahnfs
+    ln -snf /nfs /nfs/ahnfs
+    mkdir -p /opt && ln -snf /nfs /opt/ahnfs
     echo '#!/bin/bash' > /usr/bin/docker
     echo 'exit 0' >> /usr/bin/docker
     chmod +x /usr/bin/docker
@@ -107,8 +100,18 @@ data:
  
   03-perm.sh: |-
     #!/bin/bash
-    chmod -R 777 /nfs
-    find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
-    chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home /nfs/opt/ahnlab/cpp/bin /nfs/opt/ahnlab/cpp/setting 2>/dev/null || true
+    # 1. 소유권 부여
+    chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
+    # 2. 일반 폴더 권한 (755)
+    chmod -R 755 /nfs/opt /nfs/permanent /nfs/var /nfs/home 2>/dev/null || true
+    chmod -R 777 /nfs/tmp /nfs/opt/ahnlab/cpp/log 2>/dev/null || true
+    # 🚀 3. DB 전용 엄격한 권한 부여 (만약 777이면 DB가 즉시 자폭함!)
+    chmod -R 700 /nfs/database 2>/dev/null || true
+    chmod -R 700 /nfs/nosql 2>/dev/null || true
+    # 🚀 4. 몽고DB 키파일은 무조건 400이어야 구동됨
+    if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then
+      chmod 400 /nfs/nosql/conf/mongo_key*
+    fi
+    # 5. 특수 보안 파일 권한
     chmod 440 /nfs/etc/sudoers 2>/dev/null || true
     chmod 440 /nfs/etc/login.defs 2>/dev/null || true
