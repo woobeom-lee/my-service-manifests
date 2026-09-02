@@ -11,38 +11,54 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
-    if [ -f "/nfs/opt/ahnlab/cpp/bin/setting/install_link.sh" ]; then exit 0; fi
+    # 🚀 진짜 원본 파일(cpp_opensearch.properties)이 있는지로 압축 해제 여부 검사
+    if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ]; then
+      echo "[SKIP] Original AhnLab files are already extracted."
+      exit 0
+    fi
+    echo "Extracting Original AhnLab Packages..."
     if [ -f "/tools/cpp_setup.tar" ]; then
-      mkdir -p /tmp/setup_extract
+      mkdir -p /tmp/setup_extract /tmp/ahnfs_ext
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
-      if [ -n "$AHNFS_TAR" ]; then tar -zxvf "$AHNFS_TAR" -C /nfs/ > /dev/null; fi
-      rm -rf /tmp/setup_extract
+      if [ -n "$AHNFS_TAR" ]; then
+        tar -zxvf "$AHNFS_TAR" -C /tmp/ahnfs_ext/ > /dev/null
+        if [ -d "/tmp/ahnfs_ext/ahnfs" ]; then
+          cp -a /tmp/ahnfs_ext/ahnfs/* /nfs/
+        else
+          cp -a /tmp/ahnfs_ext/* /nfs/
+        fi
+      fi
+      rm -rf /tmp/setup_extract /tmp/ahnfs_ext
     elif [ -f "/tools/ahnfs.tar.gz" ]; then
-      tar -zxvf /tools/ahnfs.tar.gz -C /nfs/ > /dev/null
+      mkdir -p /tmp/ahnfs_ext
+      tar -zxvf /tools/ahnfs.tar.gz -C /tmp/ahnfs_ext/ > /dev/null
+      if [ -d "/tmp/ahnfs_ext/ahnfs" ]; then
+        cp -a /tmp/ahnfs_ext/ahnfs/* /nfs/
+      else
+        cp -a /tmp/ahnfs_ext/* /nfs/
+      fi
+      rm -rf /tmp/ahnfs_ext
+    else
+      echo "[ERROR] Setup tar file not found!"
+      exit 1
     fi
  
   02-setup.sh: |-
     #!/bin/bash
-    mkdir -p /nfs/opt/ahnlab/cpp
-    if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then
-      mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
-    fi
-    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
-    if [ -d "/nfs/ahnfs" ]; then mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true; rm -rf /nfs/ahnfs; fi
- 
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
-      if [ -d "$file" ]; then rm -rf "$file"; fi
-      touch "$file"
+      if [ ! -f "$file" ]; then touch "$file"; fi
     done
  
-    # 🚀 XML 파싱 에러 방지를 위한 Base64 암호화 주입 방식
+    # 🚀 원본 패키지에 아예 없는 log4j2.xml만 Base64로 조용히 주입 (YAML 파싱 에러 완벽 차단)
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
-    if [ -d "$LOG_XML" ]; then rm -rf "$LOG_XML"; fi
-    echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gc3RhdHVzPSJJTkZPIj4KICA8YXBwZW5kZXJzPgogICAgPENvbnNvbGUgbmFtZT0iQ29uc29sZSIgdGFyZ2V0PSJTWVNURU1fT1VUIj4KICAgICAgPFBhdHRlcm5MYXlvdXQgcGF0dGVybj0iJWR7eXl5eS1NTS1kZCBISDptbTpzcy5TU1N9IFsldF0gJS01bGV2ZWwgJWxvZ2dlcnszNn0gLSAlbXNnJW4iLz4KICAgIDwvQ29uc29sZT4KICA8L2FwcGVuZGVycz4KICA8bG9nZ2Vycz4KICAgIDxyb290IGxldmVsPSJpbmZvIj4KICAgICAgPGFwcGVuZGVyLXJlZiByZWY9IkNvbnNvbGUiLz4KICAgIDwvcm9vdD4KICA8L2xvZ2dlcnM+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
+    if [ ! -f "$LOG_XML" ]; then
+      echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gc3RhdHVzPSJJTkZPIj4KICA8YXBwZW5kZXJzPgogICAgPENvbnNvbGUgbmFtZT0iQ29uc29sZSIgdGFyZ2V0PSJTWVNURU1fT1VUIj4KICAgICAgPFBhdHRlcm5MYXlvdXQgcGF0dGVybj0iJWR7eXl5eS1NTS1kZCBISDptbTpzcy5TU1N9IFsldF0gJS01bGV2ZWwgJWxvZ2dlcnszNn0gLSAlbXNnJW4iLz4KICAgIDwvQ29uc29sZT4KICA8L2FwcGVuZGVycz4KICA8bG9nZ2Vycz4KICAgIDxyb290IGxldmVsPSJpbmZvIj4KICAgICAgPGFwcGVuZGVyLXJlZiByZWY9IkNvbnNvbGUiLz4KICAgIDwvcm9vdD4KICA8L2xvZ2dlcnM+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
+    fi
+    # 🚀 Kubelet 버그 방지용 로그 폴더 생성
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
@@ -50,4 +66,4 @@ data:
     #!/bin/bash
     chmod -R 777 /nfs
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
-    chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent 2>/dev/null || true
+    chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
