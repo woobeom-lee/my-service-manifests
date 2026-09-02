@@ -53,15 +53,9 @@ spec:
                 sleep 3
               done
               echo "Database connected successfully! Starting AhnLab setup..."
-              # 🚀 [추가됨] Sudoers 권한 에러 자가 치유
-              if [ -f /etc/sudoers ]; then
-                chmod 440 /etc/sudoers
-                chown root:root /etc/sudoers
-              fi
-              if [ -f /etc/login.defs ]; then
-                chmod 440 /etc/login.defs
-                chown root:root /etc/login.defs
-              fi
+              # 🚀 Sudoers 권한 에러 원천 차단 (파드가 스스로 440 고정)
+              if [ -f /etc/sudoers ]; then chmod 440 /etc/sudoers; chown root:root /etc/sudoers; fi
+              if [ -f /etc/login.defs ]; then chmod 440 /etc/login.defs; chown root:root /etc/login.defs; fi
  
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               echo "Fixing permissions for PgBouncer mounted paths..."

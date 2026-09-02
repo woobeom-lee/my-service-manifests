@@ -22,7 +22,7 @@ spec:
       hostAliases:
         - ip: {{ .Values.global.masterIp | quote }}
           hostnames: []
-      # 🚀 [추가됨] 3번용 구동 스크립트를 원본(1번)으로부터 스스로 복제
+      # 🚀 파드 스스로 3번 전용 스크립트로 치환(sed)하여 데이터 폴더 충돌 방지
       initContainers:
         - name: init-shard-script
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -32,11 +32,13 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "Replicating Mongo Shardsvr scripts for Shard 3..."
-              cp /nosql/cmd/epp-mongo-shardsvr.sh /nosql/cmd/epp-mongo-shardsvr3.sh || true
-              cp /nosql/conf/epp-mongo-shardsvr.conf /nosql/conf/epp-mongo-shardsvr3.conf || true
-              chown 2500:2500 /nosql/cmd/epp-mongo-shardsvr3.sh /nosql/conf/epp-mongo-shardsvr3.conf || true
-              chmod +x /nosql/cmd/epp-mongo-shardsvr3.sh || true
+              echo "Patching Mongo Shardsvr scripts for Shard 3..."
+              if [ -f /nosql/cmd/epp-mongo-shardsvr.sh ]; then
+                sed 's/shardsvr/shardsvr3/g' /nosql/cmd/epp-mongo-shardsvr.sh > /nosql/cmd/epp-mongo-shardsvr3.sh || true
+                sed 's/shardsvr/shardsvr3/g' /nosql/conf/epp-mongo-shardsvr.conf > /nosql/conf/epp-mongo-shardsvr3.conf || true
+                chown 2500:2500 /nosql/cmd/epp-mongo-shardsvr3.sh /nosql/conf/epp-mongo-shardsvr3.conf || true
+                chmod +x /nosql/cmd/epp-mongo-shardsvr3.sh || true
+              fi
           volumeMounts:
             - name: vol-nosql
               mountPath: /nosql

@@ -48,12 +48,12 @@ spec:
             - |
               echo "Starting AhnLab setup..."
  
-              # 🚀 [추가됨] install_link.sh 누락 방어 및 폴더(bin, cmd, setting) 자가 복구
+              # 🚀 누락된 설정 폴더 자가 치유 로직 (백업에서 복원)
               if [ ! -f /opt/ahnlab/cpp/bin/setting/install_link.sh ]; then
                 echo "Missing bin/setting directory detected. Restoring from backup..."
-                cp -r /opt/ahnlab/install/bin /opt/ahnlab/cpp/ 2>/dev/null || true
-                cp -r /opt/ahnlab/install/cmd /opt/ahnlab/cpp/ 2>/dev/null || true
-                cp -r /opt/ahnlab/install/setting /opt/ahnlab/cpp/ 2>/dev/null || true
+                cp -a /opt/ahnlab/install/bin /opt/ahnlab/cpp/ 2>/dev/null || true
+                cp -a /opt/ahnlab/install/cmd /opt/ahnlab/cpp/ 2>/dev/null || true
+                cp -a /opt/ahnlab/install/setting /opt/ahnlab/cpp/ 2>/dev/null || true
                 chown -R 2500:2500 /opt/ahnlab/cpp/bin /opt/ahnlab/cpp/cmd /opt/ahnlab/cpp/setting || true
               fi
  
