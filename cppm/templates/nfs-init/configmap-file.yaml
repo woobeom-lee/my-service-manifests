@@ -11,11 +11,9 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
-    # 🚀 [추가됨] Kubelet subPath 버그(파일을 디렉토리로 착각해 생성) 자동 치유 로직
     echo "Cleaning up Kubelet subPath ghost directories..."
     for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/fstab; do
       if [ -d "$BAD_DIR" ]; then
-        echo " - Removing ghost directory: $BAD_DIR"
         rm -rf "$BAD_DIR"
       fi
     done
@@ -27,7 +25,6 @@ data:
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract /tmp/ahnfs_ext
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
-      # 인증서 스크립트(site.key 생성) 구동을 위해 install 폴더 전체를 통째로 복사합니다.
       INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
       if [ -n "$INSTALL_DIR" ]; then
         mkdir -p /nfs/opt/ahnlab/cpp
@@ -41,7 +38,6 @@ data:
         PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
         if [ -n "$PERM_DIR" ]; then
           BASE_DIR=$(dirname "$PERM_DIR")
-          # 가짜 디렉토리를 위에서 삭제했으므로, 이제 덮어쓰기 에러 없이 깔끔하게 복사됩니다.
           cp -a "$BASE_DIR"/* /nfs/
         fi
       fi
@@ -66,12 +62,23 @@ data:
  
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
  
+    # 🚀 [신규 추가] 안랩 레거시 인증서 스크립트를 위한 "가짜 환경(Mock)" 조성
+    echo "storage=/nfs" > /nfs/.epp_storage_path
+    ln -snf /nfs /nfs/ahnfs
+    mkdir -p /opt && ln -snf /nfs /opt/ahnfs
+    # 🚀 [신규 추가] K8s 환경에 없는 docker 명령어 에러를 무시하기 위한 가짜(Mock) 명령어 생성
+    echo '#!/bin/bash' > /usr/local/bin/docker
+    echo 'echo "[Mock Docker] K8s mode: Ignoring legacy docker command: \$@"' >> /usr/local/bin/docker
+    chmod +x /usr/local/bin/docker
+ 
     CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
     if [ -f "$CERT_SCRIPT" ]; then
       export storage_dir=/nfs
       chmod +x "$CERT_SCRIPT"
       bash "$CERT_SCRIPT" install || true
     fi
+    # 실행이 끝나면 가짜 심볼릭 링크 깔끔하게 정리
+    rm -f /nfs/ahnfs /opt/ahnfs
  
   03-perm.sh: |-
     #!/bin/bash
