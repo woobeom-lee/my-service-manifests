@@ -11,7 +11,6 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
-    # 🚀 진짜 원본 파일(cpp_opensearch.properties)이 있는지로 압축 해제 여부 검사
     if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ]; then
       echo "[SKIP] Original AhnLab files are already extracted."
       exit 0
@@ -22,43 +21,55 @@ data:
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
       if [ -n "$AHNFS_TAR" ]; then
-        tar -zxvf "$AHNFS_TAR" -C /tmp/ahnfs_ext/ > /dev/null
-        if [ -d "/tmp/ahnfs_ext/ahnfs" ]; then
-          cp -a /tmp/ahnfs_ext/ahnfs/* /nfs/
+        echo "Found ahnfs.tar.gz at: $AHNFS_TAR. Extracting..."
+        tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
+        # 🚀 압축 구조가 어떻든 간에 'permanent' 폴더를 샅샅이 뒤져서 찾아냅니다.
+        PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
+        if [ -n "$PERM_DIR" ]; then
+          BASE_DIR=$(dirname "$PERM_DIR")
+          echo "Found AhnLab root directory at: $BASE_DIR. Copying to /nfs/..."
+          cp -a "$BASE_DIR"/* /nfs/
+          echo "Extraction and copy completed successfully!"
         else
-          cp -a /tmp/ahnfs_ext/* /nfs/
+          echo "[ERROR] Could not find 'permanent' directory inside ahnfs.tar.gz!"
         fi
+      else
+        echo "[ERROR] ahnfs.tar.gz not found inside cpp_setup.tar!"
       fi
       rm -rf /tmp/setup_extract /tmp/ahnfs_ext
     elif [ -f "/tools/ahnfs.tar.gz" ]; then
       mkdir -p /tmp/ahnfs_ext
-      tar -zxvf /tools/ahnfs.tar.gz -C /tmp/ahnfs_ext/ > /dev/null
-      if [ -d "/tmp/ahnfs_ext/ahnfs" ]; then
-        cp -a /tmp/ahnfs_ext/ahnfs/* /nfs/
-      else
-        cp -a /tmp/ahnfs_ext/* /nfs/
+      tar -zxf /tools/ahnfs.tar.gz -C /tmp/ahnfs_ext/
+      PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
+      if [ -n "$PERM_DIR" ]; then
+        BASE_DIR=$(dirname "$PERM_DIR")
+        cp -a "$BASE_DIR"/* /nfs/
       fi
       rm -rf /tmp/ahnfs_ext
     else
-      echo "[ERROR] Setup tar file not found!"
-      exit 1
+      echo "[ERROR] Setup tar file not found in /tools directory!"
     fi
  
   02-setup.sh: |-
     #!/bin/bash
+    mkdir -p /nfs/opt/ahnlab/cpp
+    if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then
+      mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+    fi
+    if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
+    if [ -d "/nfs/ahnfs" ]; then mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true; rm -rf /nfs/ahnfs; fi
+ 
     mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
     FILES=("/nfs/etc/sudoers" "/nfs/etc/login.defs" "/nfs/etc/crontab" "/nfs/permanent/clair/sql/clair2x-vuln-db.sql" "/nfs/permanent/clair/config/config.yaml")
     for file in "${FILES[@]}"; do
       if [ ! -f "$file" ]; then touch "$file"; fi
     done
  
-    # 🚀 원본 패키지에 아예 없는 log4j2.xml만 Base64로 조용히 주입 (YAML 파싱 에러 완벽 차단)
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ ! -f "$LOG_XML" ]; then
       echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gc3RhdHVzPSJJTkZPIj4KICA8YXBwZW5kZXJzPgogICAgPENvbnNvbGUgbmFtZT0iQ29uc29sZSIgdGFyZ2V0PSJTWVNURU1fT1VUIj4KICAgICAgPFBhdHRlcm5MYXlvdXQgcGF0dGVybj0iJWR7eXl5eS1NTS1kZCBISDptbTpzcy5TU1N9IFsldF0gJS01bGV2ZWwgJWxvZ2dlcnszNn0gLSAlbXNnJW4iLz4KICAgIDwvQ29uc29sZT4KICA8L2FwcGVuZGVycz4KICA8bG9nZ2Vycz4KICAgIDxyb290IGxldmVsPSJpbmZvIj4KICAgICAgPGFwcGVuZGVyLXJlZiByZWY9IkNvbnNvbGUiLz4KICAgIDwvcm9vdD4KICA8L2xvZ2dlcnM+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     fi
-    # 🚀 Kubelet 버그 방지용 로그 폴더 생성
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
