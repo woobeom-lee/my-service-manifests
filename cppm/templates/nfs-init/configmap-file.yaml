@@ -21,19 +21,12 @@ data:
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
       if [ -n "$AHNFS_TAR" ]; then
-        echo "Found ahnfs.tar.gz at: $AHNFS_TAR. Extracting..."
         tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
         PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
         if [ -n "$PERM_DIR" ]; then
           BASE_DIR=$(dirname "$PERM_DIR")
-          echo "Found AhnLab root directory at: $BASE_DIR. Copying to /nfs/..."
           cp -a "$BASE_DIR"/* /nfs/
-          echo "Extraction and copy completed successfully!"
-        else
-          echo "[ERROR] Could not find 'permanent' directory inside ahnfs.tar.gz!"
         fi
-      else
-        echo "[ERROR] ahnfs.tar.gz not found inside cpp_setup.tar!"
       fi
       rm -rf /tmp/setup_extract /tmp/ahnfs_ext
     elif [ -f "/tools/ahnfs.tar.gz" ]; then
@@ -45,16 +38,12 @@ data:
         cp -a "$BASE_DIR"/* /nfs/
       fi
       rm -rf /tmp/ahnfs_ext
-    else
-      echo "[ERROR] Setup tar file not found in /tools directory!"
     fi
  
   02-setup.sh: |-
     #!/bin/bash
     mkdir -p /nfs/opt/ahnlab/cpp
-    if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then
-      mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
-    fi
+    if [ -d "/nfs/bin" ] && [ -d "/nfs/cmd" ]; then mv /nfs/bin /nfs/cmd /nfs/setting /nfs/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
     if [ -d "/nfs/ahnfs/opt/ahnlab/cpp" ]; then cp -r /nfs/ahnfs/opt/ahnlab/cpp/* /nfs/opt/ahnlab/cpp/ 2>/dev/null || true; fi
     if [ -d "/nfs/ahnfs" ]; then mv /nfs/ahnfs/* /nfs/ 2>/dev/null || true; rm -rf /nfs/ahnfs; fi
  
@@ -64,31 +53,32 @@ data:
       if [ ! -f "$file" ]; then touch "$file"; fi
     done
  
+    # 🚀 [패치 1] Log4j2가 아닌 "Logback" 문법으로 작성된 XML을 Base64로 주입
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ ! -f "$LOG_XML" ]; then
-      echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gc3RhdHVzPSJJTkZPIj4KICA8YXBwZW5kZXJzPgogICAgPENvbnNvbGUgbmFtZT0iQ29uc29sZSIgdGFyZ2V0PSJTWVNURU1fT1VUIj4KICAgICAgPFBhdHRlcm5MYXlvdXQgcGF0dGVybj0iJWR7eXl5eS1NTS1kZCBISDptbTpzcy5TU1N9IFsldF0gJS01bGV2ZWwgJWxvZ2dlcnszNn0gLSAlbXNnJW4iLz4KICAgIDwvQ29uc29sZT4KICA8L2FwcGVuZGVycz4KICA8bG9nZ2Vycz4KICAgIDxyb290IGxldmVsPSJpbmZvIj4KICAgICAgPGFwcGVuZGVyLXJlZiByZWY9IkNvbnNvbGUiLz4KICAgIDwvcm9vdD4KICA8L2xvZ2dlcnM+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
+      echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     fi
     if [ -f "/nfs/opt/ahnlab/cpp/log" ]; then rm -f /nfs/opt/ahnlab/cpp/log; fi
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
  
-    # 🚀 [신규 추가 1] Kafka 파티션 롤(Role) 파일 생성 (기본값 1)
-    echo "Creating Kafka role config..."
-    mkdir -p /nfs/permanent/save
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
  
-    # 🚀 [신규 추가 2] 내부 인증서 자동 갱신 스크립트 실행
     CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
     if [ -f "$CERT_SCRIPT" ]; then
-      echo "Running AhnLab Certificate Update Script..."
-      # 원본 스크립트가 참조하는 환경변수(storage_dir)를 맞물려줌
       export storage_dir=/nfs
-      # 스크립트 실행 권한 부여 후 실행 (에러가 나도 init이 중단되지 않도록 || true 추가)
       chmod +x "$CERT_SCRIPT"
       bash "$CERT_SCRIPT" install || true
-      echo "Certificate Update Completed."
-    else
-      echo "[WARNING] Certificate script not found at $CERT_SCRIPT"
+    fi
+ 
+    # 🚀 [패치 2] Mongo Shard 2, 3번용 구동 스크립트 자동 복제
+    if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
+      cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
+      cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
+    fi
+    if [ -f "/nfs/nosql/conf/epp-mongo-shardsvr.conf" ]; then
+      cp /nfs/nosql/conf/epp-mongo-shardsvr.conf /nfs/nosql/conf/epp-mongo-shardsvr2.conf
+      cp /nfs/nosql/conf/epp-mongo-shardsvr.conf /nfs/nosql/conf/epp-mongo-shardsvr3.conf
     fi
  
   03-perm.sh: |-
@@ -96,3 +86,6 @@ data:
     chmod -R 777 /nfs
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
     chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
+    # 🚀 [패치 3] PgBouncer 기동 불가(sudoers world writable) 방어
+    chmod 440 /nfs/etc/sudoers 2>/dev/null || true
+    chmod 440 /nfs/etc/login.defs 2>/dev/null || true
