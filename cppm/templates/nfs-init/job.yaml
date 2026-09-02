@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name: nfs-init
   namespace: {{ .Release.Namespace }}
-  # 🚀 [추가됨] 이 Job이 클러스터에서 가장 먼저 단독으로 실행되도록 강제
+  # 🚀 대본과 세트로 맞춘 PreSync 훅
   annotations:
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -44,6 +44,6 @@ spec:
             defaultMode: 0777
         - name: vol-tools
           hostPath:
-            # 원본 cpp_setup.tar 또는 ahnfs.tar.gz가 존재하는 호스트 경로 (기존 설정 유지)
-            path: /home/ubuntu/cpp_installer/cpp_setup
+            # 🚀 Git 저장소 내부의 '단일 원본' 도구함 폴더를 정확히 지칭!
+            path: /home/registry/my-service-manifests/cppm/tools
             type: DirectoryOrCreate
