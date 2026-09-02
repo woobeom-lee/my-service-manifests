@@ -11,7 +11,8 @@ data:
  
   01-extract.sh: |-
     #!/bin/bash
-    if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ]; then
+    # 원본 파일이 존재하면 압축 해제 스킵
+    if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -d "/nfs/opt/ahnlab/cpp/bin/setting" ]; then
       echo "[SKIP] Original AhnLab files are already extracted."
       exit 0
     fi
@@ -53,7 +54,7 @@ data:
       if [ ! -f "$file" ]; then touch "$file"; fi
     done
  
-    # 🚀 [패치 1] Log4j2가 아닌 "Logback" 문법으로 작성된 XML을 Base64로 주입
+    # 🚀 완벽한 Logback 형태의 XML 주입
     mkdir -p /nfs/permanent/etc/config
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ ! -f "$LOG_XML" ]; then
@@ -71,7 +72,7 @@ data:
       bash "$CERT_SCRIPT" install || true
     fi
  
-    # 🚀 [패치 2] Mongo Shard 2, 3번용 구동 스크립트 자동 복제
+    # 🚀 Mongo Shard 2, 3번 스크립트 복제
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
@@ -86,6 +87,5 @@ data:
     chmod -R 777 /nfs
     find /nfs -type d -name "cppoltpdata" -exec chmod 700 {} \;
     chown -R 2500:2500 /nfs/opt/ahnlab /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
-    # 🚀 [패치 3] PgBouncer 기동 불가(sudoers world writable) 방어
     chmod 440 /nfs/etc/sudoers 2>/dev/null || true
     chmod 440 /nfs/etc/login.defs 2>/dev/null || true
