@@ -22,7 +22,7 @@ spec:
         kubernetes.io/hostname: "cpp-server"
       containers:
         - name: epp-kafka
-          image: "ghcr.io/woobeom-lee/cpp-kafka:latest"
+          image: "ghcr.io/woobeom-lee/cpp-kafka:4.1.1"
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
