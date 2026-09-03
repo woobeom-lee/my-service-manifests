@@ -22,7 +22,7 @@ data:
  
     echo "=== 2. Extracting Everything from /tools/cpp_setup.tar ==="
     if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -f "/nfs/permanent/etc/config/site.key" ]; then
-      echo "[SKIP] Original AhnLab files are already extracted and key exists."
+      echo "[SKIP] Original AhnLab files are already extracted."
       exit 0
     fi
  
@@ -44,7 +44,7 @@ data:
       fi
       rm -rf /tmp/setup_extract /tmp/ahnfs_ext
     else
-      echo "[ERROR] /tools/cpp_setup.tar not found! Cannot proceed with initialization."
+      echo "[ERROR] /tools/cpp_setup.tar not found!"
       exit 1
     fi
  
@@ -86,16 +86,21 @@ data:
     echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
     echo "storage=" > /nfs/.epp_storage_path
  
-    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 생성 및 오타 교정 ==="
+    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 오타 및 포트 충돌 교정 ==="
+    # Shard 2 (포트 8826)
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
     sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/conf/shardsvr2.conf
     sed -i 's/clusterRole: shardsvr2/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr2.conf
     sed -i 's/replSetName: SHARD1/replSetName: SHARD2/g' /nfs/nosql/conf/shardsvr2.conf
+    sed -i 's/port: 8824/port: 8826/g' /nfs/nosql/conf/shardsvr2.conf
+    # Shard 3 (포트 8827)
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr3.conf 2>/dev/null || true
     sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/conf/shardsvr3.conf
     sed -i 's/clusterRole: shardsvr3/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr3.conf
     sed -i 's/replSetName: SHARD1/replSetName: SHARD3/g' /nfs/nosql/conf/shardsvr3.conf
+    sed -i 's/port: 8824/port: 8827/g' /nfs/nosql/conf/shardsvr3.conf
  
+    # 실행 스크립트 복제
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
       sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
@@ -131,15 +136,13 @@ data:
     chmod -R 700 /nfs/database /nfs/nosql 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
-    echo "=== [K8s Patch 6] 추가 생성된 리소스 권한 부여 ==="
+    echo "=== [K8s Patch 6] 리소스 권한 부여 ==="
     chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
     chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
     chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
     chmod 700 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
- 
     chown -R 2500:2500 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
     chmod 700 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
- 
     chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
     chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
  
