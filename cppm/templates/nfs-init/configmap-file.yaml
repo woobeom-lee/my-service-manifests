@@ -86,11 +86,15 @@ data:
     echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
     echo "storage=" > /nfs/.epp_storage_path
  
-    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 생성 ==="
+    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 생성 및 오타 교정 ==="
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
     sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/conf/shardsvr2.conf
+    sed -i 's/clusterRole: shardsvr2/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr2.conf
+    sed -i 's/replSetName: SHARD1/replSetName: SHARD2/g' /nfs/nosql/conf/shardsvr2.conf
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr3.conf 2>/dev/null || true
     sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/conf/shardsvr3.conf
+    sed -i 's/clusterRole: shardsvr3/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr3.conf
+    sed -i 's/replSetName: SHARD1/replSetName: SHARD3/g' /nfs/nosql/conf/shardsvr3.conf
  
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
