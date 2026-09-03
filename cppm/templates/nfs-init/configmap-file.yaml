@@ -86,7 +86,7 @@ data:
     echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
     echo "storage=" > /nfs/.epp_storage_path
  
-    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 및 스크립트 생성 ==="
+    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 생성 ==="
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
     sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/conf/shardsvr2.conf
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr3.conf 2>/dev/null || true
@@ -98,9 +98,6 @@ data:
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
       sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
     fi
-    chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
-    chmod 700 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
- 
     echo "=== [K8s Patch 3] Postgres pg_hba.conf K8s 네트워크 오픈 ==="
     PG_HBA=$(find /nfs/database /nfs/permanent -name "pg_hba.conf" 2>/dev/null | head -n 1)
     if [ -n "$PG_HBA" ] && ! grep -q "hostnossl.*0.0.0.0/0" "$PG_HBA"; then
@@ -110,6 +107,19 @@ data:
       echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
     fi
  
+    echo "=== [K8s Patch 4] Mongo Shard 2, 3 데이터 디렉터리 동적 생성 ==="
+    mkdir -p /nfs/nosql/data/shardsvr2
+    mkdir -p /nfs/nosql/data/shardsvr3
+ 
+    echo "=== [K8s Patch 5] X-Server 기동 스크립트(epp-xserver.sh) 동적 생성 ==="
+    mkdir -p /nfs/opt/ahnlab/cpp/cmd
+    echo '#!/bin/bash' > /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'export DISPLAY=:99' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'Xvfb :99 -ac -screen 0 1280x1024x24 -nolisten tcp &' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'XVFB_PID=$!' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'trap "kill -SIGTERM $XVFB_PID" SIGINT SIGTERM' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'wait $XVFB_PID' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+ 
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
@@ -117,8 +127,16 @@ data:
     chmod -R 700 /nfs/database /nfs/nosql 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
-    echo "=== [K8s Patch 4] Java site.key 읽기 권한 부여 ==="
+    echo "=== [K8s Patch 6] 추가 생성된 리소스 권한 부여 ==="
     chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
     chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
+    chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
+    chmod 700 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
+ 
+    chown -R 2500:2500 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
+    chmod 700 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
+ 
+    chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
+    chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
  
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="
