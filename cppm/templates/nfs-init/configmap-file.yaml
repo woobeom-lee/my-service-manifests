@@ -3,7 +3,6 @@ kind: ConfigMap
 metadata:
   name: nfs-init-file-cm
   namespace: {{ .Release.Namespace }}
-  # 🚀 ArgoCD/Helm이 제일 먼저(PreSync) 실행하도록 지시
   annotations:
     argocd.argoproj.io/hook: PreSync
     helm.sh/hook: pre-install,pre-upgrade
@@ -26,26 +25,23 @@ data:
       echo "[SKIP] Original AhnLab files are already extracted and key exists."
       exit 0
     fi
+ 
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
-      # [작업 A] 필수 install 폴더 및 쉘 스크립트 강제 이식
       INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
       if [ -n "$INSTALL_DIR" ]; then
-        echo "Seeding critical scripts from inner install directory..."
         mkdir -p /nfs/opt/ahnlab/cpp
         cp -a "$INSTALL_DIR"/bin "$INSTALL_DIR"/cmd "$INSTALL_DIR"/setting "$INSTALL_DIR"/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
         cp -a "$INSTALL_DIR" /nfs/opt/ahnlab/ 2>/dev/null || true
       fi
  
-      # [작업 B] AhnFS 데이터베이스 및 설정 파일 이식
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
-      if [ -n "$AHNFS_TAR" ]; then 
+      if [ -n "$AHNFS_TAR" ]; then
         mkdir -p /tmp/ahnfs_ext && tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
         PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
         if [ -n "$PERM_DIR" ]; then cp -a $(dirname "$PERM_DIR")/* /nfs/; fi
       fi
-      # 사용 끝난 임시 작업장 삭제
       rm -rf /tmp/setup_extract /tmp/ahnfs_ext
     else
       echo "[ERROR] /tools/cpp_setup.tar not found! Cannot proceed with initialization."
@@ -69,11 +65,10 @@ data:
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
  
-    echo "storage=/nfs" > /nfs/.epp_storage_path
     rm -rf /nfs/ahnfs /opt/ahnfs
     ln -snf /nfs /nfs/ahnfs
     mkdir -p /opt && ln -snf /nfs /opt/ahnfs
-    # K8s 환경에서 레거시 스크립트의 무한 대기를 막기 위한 가짜(Mock) Docker 주입
+ 
     echo '#!/bin/bash' > /usr/bin/docker
     echo 'exit 0' >> /usr/bin/docker
     chmod +x /usr/bin/docker
@@ -88,26 +83,42 @@ data:
     fi
     rm -f /nfs/ahnfs /opt/ahnfs
  
-    echo "=== 4. Fixing Mongo Scripts (Safe Path Replace) ==="
-    if [ -f "/nfs/nosql/cmd/shardsvr.sh" ]; then
-      sed 's|/shardsvr|/shardsvr2|g' /nfs/nosql/cmd/shardsvr.sh > /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
-      sed 's|/shardsvr|/shardsvr3|g' /nfs/nosql/cmd/shardsvr.sh > /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
-      chmod +x /nfs/nosql/cmd/epp-mongo-shardsvr*.sh
+    echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
+    echo "storage=" > /nfs/.epp_storage_path
+ 
+    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 및 스크립트 생성 ==="
+    cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
+    sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/conf/shardsvr2.conf
+    cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr3.conf 2>/dev/null || true
+    sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/conf/shardsvr3.conf
+ 
+    if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
+      cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
+      sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
+      cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
+      sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
     fi
-    if [ -f "/nfs/nosql/conf/shardsvr.conf" ]; then
-      sed 's|/shardsvr|/shardsvr2|g' /nfs/nosql/conf/shardsvr.conf > /nfs/nosql/conf/epp-mongo-shardsvr2.conf
-      sed 's|/shardsvr|/shardsvr3|g' /nfs/nosql/conf/shardsvr.conf > /nfs/nosql/conf/epp-mongo-shardsvr3.conf
+    chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
+    chmod 700 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
+ 
+    echo "=== [K8s Patch 3] Postgres pg_hba.conf K8s 네트워크 오픈 ==="
+    PG_HBA=$(find /nfs/database /nfs/permanent -name "pg_hba.conf" 2>/dev/null | head -n 1)
+    if [ -n "$PG_HBA" ] && ! grep -q "hostnossl.*0.0.0.0/0" "$PG_HBA"; then
+      echo "hostnossl all all 0.0.0.0/0 md5" >> "$PG_HBA"
+      echo "hostnossl all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
+      echo "host all all 0.0.0.0/0 md5" >> "$PG_HBA"
+      echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
     fi
  
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
     chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
-    # DB 자폭을 막기 위한 필수 권한 제어
     chmod -R 700 /nfs/database /nfs/nosql 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
-    # 권한 설정
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
+    echo "=== [K8s Patch 4] Java site.key 읽기 권한 부여 ==="
     chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
     chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
+ 
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="
