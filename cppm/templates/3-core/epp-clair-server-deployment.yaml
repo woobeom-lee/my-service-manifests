@@ -20,7 +20,7 @@ spec:
         kubernetes.io/hostname: "cpp-server"
       containers:
         - name: clair-server
-          image: "abis.ahnlab.com/cpp/clair-local-scan:latest"
+          image: "ghcr.io/woobeom-lee/clair-local-scan:latest"
           imagePullPolicy: IfNotPresent
           # 💡 [핵심 수정됨] vol-config 마운트 부분에서 subPath 옵션이 완전히 제거되었습니다.
           volumeMounts:

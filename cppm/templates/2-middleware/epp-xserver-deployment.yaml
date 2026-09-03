@@ -21,7 +21,7 @@ spec:
         kubernetes.io/hostname: "cpp-server"
       containers:
         - name: epp-xserver
-          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          image: ghcr.io/woobeom-lee/cpp-xserver:latest
           imagePullPolicy: IfNotPresent
           # 💡 루트 권한으로 패키지 설치 후 스크립트 실행
           securityContext:
