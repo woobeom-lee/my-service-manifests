@@ -35,7 +35,7 @@ spec:
               if [ -f /nosql/cmd/epp-mongo-shardsvr.sh ]; then
                 # 🚀 수정됨: 옵션은 놔두고 '/shardsvr' 경로만 정확히 '/shardsvr3'로 변경
                 sed 's|/shardsvr|/shardsvr3|g' /nosql/cmd/epp-mongo-shardsvr.sh > /nosql/cmd/epp-mongo-shardsvr3.sh || true
-                sed 's|/shardsvr|/shardsvr3|g' /nosql/conf/epp-mongo-shardsvr.conf > /nosql/conf/epp-mongo-shardsvr3.conf || true
+                sed 's|/shardsvr|/shardsvr3|g' /nosql/conf/shardsvr.conf > /nosql/conf/epp-mongo-shardsvr3.conf || true
                 chown 2500:2500 /nosql/cmd/epp-mongo-shardsvr3.sh /nosql/conf/epp-mongo-shardsvr3.conf || true
                 chmod +x /nosql/cmd/epp-mongo-shardsvr3.sh || true
               fi
