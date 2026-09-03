@@ -89,14 +89,14 @@ data:
     rm -f /nfs/ahnfs /opt/ahnfs
  
     echo "=== 4. Fixing Mongo Scripts (Safe Path Replace) ==="
-    if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
-      sed 's|/shardsvr|/shardsvr2|g' /nfs/nosql/cmd/epp-mongo-shardsvr.sh > /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
-      sed 's|/shardsvr|/shardsvr3|g' /nfs/nosql/cmd/epp-mongo-shardsvr.sh > /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
+    if [ -f "/nfs/nosql/cmd/shardsvr.sh" ]; then
+      sed 's|/shardsvr|/shardsvr2|g' /nfs/nosql/cmd/shardsvr.sh > /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
+      sed 's|/shardsvr|/shardsvr3|g' /nfs/nosql/cmd/shardsvr.sh > /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
       chmod +x /nfs/nosql/cmd/epp-mongo-shardsvr*.sh
     fi
-    if [ -f "/nfs/nosql/conf/epp-mongo-shardsvr.conf" ]; then
-      sed 's|/shardsvr|/shardsvr2|g' /nfs/nosql/conf/epp-mongo-shardsvr.conf > /nfs/nosql/conf/epp-mongo-shardsvr2.conf
-      sed 's|/shardsvr|/shardsvr3|g' /nfs/nosql/conf/epp-mongo-shardsvr.conf > /nfs/nosql/conf/epp-mongo-shardsvr3.conf
+    if [ -f "/nfs/nosql/conf/shardsvr.conf" ]; then
+      sed 's|/shardsvr|/shardsvr2|g' /nfs/nosql/conf/shardsvr.conf > /nfs/nosql/conf/epp-mongo-shardsvr2.conf
+      sed 's|/shardsvr|/shardsvr3|g' /nfs/nosql/conf/shardsvr.conf > /nfs/nosql/conf/epp-mongo-shardsvr3.conf
     fi
  
   03-perm.sh: |-
@@ -108,4 +108,6 @@ data:
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     # 권한 설정
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
+    chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
+    chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="

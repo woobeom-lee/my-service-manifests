@@ -55,13 +55,13 @@ spec:
       volumes:
         - name: vol-cpp
           hostPath:
-            path: /home/k8s/cpp_installer/ahnfs/opt/ahnlab/cpp
+            path: /data/ahnfs/opt/ahnlab/cpp
             type: DirectoryOrCreate
         - name: vol-permanent
           hostPath:
-            path: /home/k8s/cpp_installer/ahnfs/permanent
+            path: /data/ahnfs/permanent
             type: DirectoryOrCreate
         - name: vol-tmp
           hostPath:
-            path: /home/k8s/cpp_installer/ahnfs/tmp
+            path: /data/ahnfs/tmp
             type: DirectoryOrCreate

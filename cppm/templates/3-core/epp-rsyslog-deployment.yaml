@@ -121,7 +121,7 @@ spec:
             sizeLimit: 16Mi
         - name: vol-ahnfs-root
           hostPath:
-            path: /home/k8s/cpp_installer/ahnfs
+            path: /data/ahnfs
             type: Directory
         - name: vol-host-log
           hostPath:
