@@ -102,7 +102,11 @@ data:
       echo "host all all 0.0.0.0/0 md5" >> "$PG_HBA"
       echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
     fi
-    echo "=== [K8s Patch 4] Mongo Shard 2, 3 데이터 디렉터리 동적 생성 ==="
+    echo "=== [K8s Patch 4] Mongo Shard 데이터 디렉터리 완벽 초기화 ==="
+    # Shard 1번의 찌꺼기(Dirty Data) 완전 포맷
+    echo "Wiping dirty data for Shard 1..."
+    rm -rf /nfs/nosql/data/shardsvr/*
+    # Shard 2, 3번 데이터 디렉터리 동적 생성
     mkdir -p /nfs/nosql/data/shardsvr2
     mkdir -p /nfs/nosql/data/shardsvr3
     echo "=== [K8s Patch 5] X-Server 기동 스크립트(epp-xserver.sh) 동적 생성 ==="
