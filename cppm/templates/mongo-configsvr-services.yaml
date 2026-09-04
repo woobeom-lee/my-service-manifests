@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-mongo-configsvr1
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: epp-mongo-configsvr1
+  ports:
+    - protocol: TCP
+      port: 8821
+      targetPort: 8821
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-mongo-configsvr2
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: epp-mongo-configsvr2
+  ports:
+    - protocol: TCP
+      port: 8822
+      targetPort: 8822
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epp-mongo-configsvr3
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: epp-mongo-configsvr3
+  ports:
+    - protocol: TCP
+      port: 8823
+      targetPort: 8823
