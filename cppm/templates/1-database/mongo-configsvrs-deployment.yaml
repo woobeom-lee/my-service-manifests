@@ -19,7 +19,7 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      hostname: cpp-mongo-configsvr1
+      hostname: epp-mongo-configsvr1
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
@@ -69,7 +69,177 @@ spec:
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
-              value: "cpp-mongo-configsvr1"
+              value: "epp-mongo-configsvr1"
+            - name: DOCKER_HOST
+              value: "unix:///var/run/docker.sock"
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
+      volumes:
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        {{- include "cppm.commonVolumes" . | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-mongo-configsvr2
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-mongo-configsvr2
+spec:
+  replicas: {{ .Values.database.mongo.configsvr2.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-mongo-configsvr2
+  template:
+    metadata:
+      labels:
+        app: epp-mongo-configsvr2
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: epp-mongo-configsvr2
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: {{ .Values.global.masterIp | quote }}
+          hostnames:
+            - "host.docker.internal"
+            - "epp-postgres-eppoltp"
+            - "epp-mgr"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              echo "Fixing permissions for ConfigSvr1 mounted paths..."
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
+      containers:
+        - name: epp-mongo-configsvr2
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/nosql/cmd/epp-mongo-configsvr2.sh"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "512Mi"
+          ports:
+            - containerPort: 8822
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "epp-mongo-configsvr2"
+            - name: DOCKER_HOST
+              value: "unix:///var/run/docker.sock"
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
+      volumes:
+        - name: vol-docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        {{- include "cppm.commonVolumes" . | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epp-mongo-configsvr3
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: epp-mongo-configsvr3
+spec:
+  replicas: {{ .Values.database.mongo.configsvr3.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: epp-mongo-configsvr3
+  template:
+    metadata:
+      labels:
+        app: epp-mongo-configsvr3
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: epp-mongo-configsvr3
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      hostAliases:
+        - ip: {{ .Values.global.masterIp | quote }}
+          hostnames:
+            - "host.docker.internal"
+            - "epp-postgres-eppoltp"
+            - "epp-mgr"
+      initContainers:
+        - name: init-link
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              echo "Fixing permissions for ConfigSvr1 mounted paths..."
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
+      containers:
+        - name: epp-mongo-configsvr3
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/nosql/cmd/epp-mongo-configsvr3.sh"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "512Mi"
+          ports:
+            - containerPort: 8823
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "epp-mongo-configsvr3"
             - name: DOCKER_HOST
               value: "unix:///var/run/docker.sock"
           volumeMounts:
