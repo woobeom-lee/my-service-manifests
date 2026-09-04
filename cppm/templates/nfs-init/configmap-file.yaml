@@ -12,20 +12,17 @@ data:
     bash /init/01-extract.sh
     bash /init/02-setup.sh
     bash /init/03-perm.sh
- 
   01-extract.sh: |-
     #!/bin/bash
     echo "=== 1. Force Cleaning Kubelet Ghost Directories ==="
     for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/opt/ahnlab/cpp/cmd /nfs/opt/ahnlab/cpp/bin /nfs/opt/ahnlab/cpp/setting; do
       if [ -d "$BAD_DIR" ] && [ -z "$(ls -A $BAD_DIR 2>/dev/null)" ]; then rm -rf "$BAD_DIR"; fi
     done
- 
     echo "=== 2. Extracting Everything from /tools/cpp_setup.tar ==="
     if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -f "/nfs/permanent/etc/config/site.key" ]; then
       echo "[SKIP] Original AhnLab files are already extracted."
       exit 0
     fi
- 
     if [ -f "/tools/cpp_setup.tar" ]; then
       mkdir -p /tmp/setup_extract
       tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
@@ -35,7 +32,6 @@ data:
         cp -a "$INSTALL_DIR"/bin "$INSTALL_DIR"/cmd "$INSTALL_DIR"/setting "$INSTALL_DIR"/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
         cp -a "$INSTALL_DIR" /nfs/opt/ahnlab/ 2>/dev/null || true
       fi
- 
       AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
       if [ -n "$AHNFS_TAR" ]; then
         mkdir -p /tmp/ahnfs_ext && tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
@@ -47,7 +43,6 @@ data:
       echo "[ERROR] /tools/cpp_setup.tar not found!"
       exit 1
     fi
- 
   02-setup.sh: |-
     #!/bin/bash
     echo "=== 3. Setting up Configs & Mock Docker ==="
@@ -55,26 +50,21 @@ data:
     for file in /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/crontab /nfs/permanent/clair/sql/clair2x-vuln-db.sql /nfs/permanent/clair/config/config.yaml; do
       if [ ! -f "$file" ]; then touch "$file"; fi
     done
- 
     LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
     if [ ! -f "$LOG_XML" ]; then
       echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     fi
- 
     rm -rf /nfs/opt/ahnlab/cpp/log
     mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
- 
     rm -rf /nfs/ahnfs /opt/ahnfs
     ln -snf /nfs /nfs/ahnfs
     mkdir -p /opt && ln -snf /nfs /opt/ahnfs
- 
     echo '#!/bin/bash' > /usr/bin/docker
     echo 'exit 0' >> /usr/bin/docker
     chmod +x /usr/bin/docker
     cp /usr/bin/docker /bin/docker
     cp /usr/bin/docker /usr/local/bin/docker
- 
     CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
     if [ -f "$CERT_SCRIPT" ]; then
       export storage_dir=/nfs
@@ -82,10 +72,8 @@ data:
       bash "$CERT_SCRIPT" install || true
     fi
     rm -f /nfs/ahnfs /opt/ahnfs
- 
     echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
     echo "storage=" > /nfs/.epp_storage_path
- 
     echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 오타 및 포트 충돌 교정 ==="
     # Shard 2 (포트 8826)
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
@@ -99,7 +87,6 @@ data:
     sed -i 's/clusterRole: shardsvr3/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr3.conf
     sed -i 's/replSetName: SHARD1/replSetName: SHARD3/g' /nfs/nosql/conf/shardsvr3.conf
     sed -i 's/port: 8824/port: 8827/g' /nfs/nosql/conf/shardsvr3.conf
- 
     # 실행 스크립트 복제
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
@@ -115,11 +102,9 @@ data:
       echo "host all all 0.0.0.0/0 md5" >> "$PG_HBA"
       echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
     fi
- 
     echo "=== [K8s Patch 4] Mongo Shard 2, 3 데이터 디렉터리 동적 생성 ==="
     mkdir -p /nfs/nosql/data/shardsvr2
     mkdir -p /nfs/nosql/data/shardsvr3
- 
     echo "=== [K8s Patch 5] X-Server 기동 스크립트(epp-xserver.sh) 동적 생성 ==="
     mkdir -p /nfs/opt/ahnlab/cpp/cmd
     echo '#!/bin/bash' > /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
@@ -129,6 +114,10 @@ data:
     echo 'trap "kill -SIGTERM $XVFB_PID" SIGINT SIGTERM' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
     echo 'wait $XVFB_PID' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
  
+    echo "=== [K8s Patch - MongoDB DNS] Fixing MongoDB Configs for K8s (cpp- to epp-) ==="
+    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf 2>/dev/null || true
+    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/shardsvr*.conf 2>/dev/null || true
+    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/mongos.conf 2>/dev/null || true
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
@@ -145,5 +134,4 @@ data:
     chmod 700 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
     chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
     chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
- 
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="
