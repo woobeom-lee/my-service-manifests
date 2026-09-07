@@ -75,19 +75,10 @@ data:
     echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
     echo "storage=" > /nfs/.epp_storage_path
     echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 오타 및 포트 충돌 교정 ==="
-    # Shard 2 (포트 8826)
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
-    sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/conf/shardsvr2.conf
-    sed -i 's/clusterRole: shardsvr2/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr2.conf
-    sed -i 's/replSetName: SHARD1/replSetName: SHARD2/g' /nfs/nosql/conf/shardsvr2.conf
-    sed -i 's/port: 8824/port: 8826/g' /nfs/nosql/conf/shardsvr2.conf
-    # Shard 3 (포트 8827)
+    sed -i 's/shardsvr/shardsvr2/g; s/clusterRole: shardsvr2/clusterRole: shardsvr/g; s/replSetName: SHARD1/replSetName: SHARD2/g; s/port: 8824/port: 8826/g' /nfs/nosql/conf/shardsvr2.conf
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr3.conf 2>/dev/null || true
-    sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/conf/shardsvr3.conf
-    sed -i 's/clusterRole: shardsvr3/clusterRole: shardsvr/g' /nfs/nosql/conf/shardsvr3.conf
-    sed -i 's/replSetName: SHARD1/replSetName: SHARD3/g' /nfs/nosql/conf/shardsvr3.conf
-    sed -i 's/port: 8824/port: 8827/g' /nfs/nosql/conf/shardsvr3.conf
-    # 실행 스크립트 복제
+    sed -i 's/shardsvr/shardsvr3/g; s/clusterRole: shardsvr3/clusterRole: shardsvr/g; s/replSetName: SHARD1/replSetName: SHARD3/g; s/port: 8824/port: 8827/g' /nfs/nosql/conf/shardsvr3.conf
     if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
       sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
@@ -103,13 +94,9 @@ data:
       echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
     fi
     echo "=== [K8s Patch 4] Mongo Shard 데이터 디렉터리 완벽 초기화 ==="
-    # Shard 1번의 찌꺼기(Dirty Data) 완전 포맷
-    echo "Wiping dirty data for Shard 1..."
     rm -rf /nfs/nosql/data/shardsvr/*
-    # Shard 2, 3번 데이터 디렉터리 동적 생성
-    mkdir -p /nfs/nosql/data/shardsvr2
-    mkdir -p /nfs/nosql/data/shardsvr3
-    echo "=== [K8s Patch 5] X-Server 기동 스크립트(epp-xserver.sh) 동적 생성 ==="
+    mkdir -p /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3
+    echo "=== [K8s Patch 5] X-Server 기동 스크립트 생성 ==="
     mkdir -p /nfs/opt/ahnlab/cpp/cmd
     echo '#!/bin/bash' > /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
     echo 'export DISPLAY=:99' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
@@ -118,10 +105,11 @@ data:
     echo 'trap "kill -SIGTERM $XVFB_PID" SIGINT SIGTERM' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
     echo 'wait $XVFB_PID' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
  
-    echo "=== [K8s Patch - MongoDB DNS] Fixing MongoDB Configs for K8s (cpp- to epp-) ==="
-    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf 2>/dev/null || true
-    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/shardsvr*.conf 2>/dev/null || true
-    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/mongos.conf 2>/dev/null || true
+    echo "=== [K8s Patch 6] 컴포넌트 하드코딩 도메인(cpp-) -> K8s 주소(epp-) 일괄 치환 ==="
+    # 몽고DB 도메인 교정
+    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/conf/mongos.conf 2>/dev/null || true
+    # Postgres, PgBouncer, Redis, Kafka 도메인 교정
+    find /nfs/opt/ahnlab/cpp/setting/ /nfs/permanent/ -type f \( -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.xml" -o -name "*.cfg" -o -name "*.conf" \) -exec sed -i 's/cpp-postgres/epp-postgres/g; s/cpp-pgbouncer/epp-pgbouncer/g; s/cpp-redis/epp-redis/g; s/cpp-kafka/epp-kafka/g' {} + 2>/dev/null || true
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
@@ -129,7 +117,7 @@ data:
     chmod -R 700 /nfs/database /nfs/nosql 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
-    echo "=== [K8s Patch 6] 리소스 권한 부여 ==="
+    echo "=== [K8s Patch 7] 리소스 권한 부여 ==="
     chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
     chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
     chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
