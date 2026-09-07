@@ -45,18 +45,13 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 1. 볼륨을 지웠든 안 지웠든 무조건 순정 파일 복구를 위해 기존 파일 삭제
-              rm -f /permanent/service/redis/conf/redis.conf
-              # 2. 안랩 순정 설정 스크립트 실행 (redis.conf에 순정 암호가 자동 세팅됨)
-              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              # 3. bind 주소만 0.0.0.0으로 통신 가능하게 오픈
-              CONF_FILE="/permanent/service/redis/conf/redis.conf"
-              if [ -f "$CONF_FILE" ]; then
-                sed -i '/bind/s/cpp-redis/0.0.0.0/g' "$CONF_FILE"
+              if [ -f /permanent/service/redis/conf/redis.conf ]; then
+                echo "Fixing redis.conf bind address to 0.0.0.0..."
+                sed -i '/bind/s/cpp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
               fi
-              # 4. 권한 복구 및 도커 소켓 권한 부여
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              echo "Fixing permissions for Redis mounted paths..."
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
-              if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
@@ -65,7 +60,6 @@ spec:
         - name: epp-redis
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          # 원본 실행 스크립트로 롤백 (순정 암호 적용)
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-redis.sh"]
           securityContext:
             privileged: true
@@ -107,7 +101,6 @@ spec:
     - port: 8831
       targetPort: 8831
 ---
-# 🔥 추가된 부분: cpp-redis로 들어오는 요청도 epp-redis 파드로 연결해주는 이중 서비스 생성
 apiVersion: v1
 kind: Service
 metadata:
