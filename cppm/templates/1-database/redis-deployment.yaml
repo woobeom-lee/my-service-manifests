@@ -45,17 +45,15 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              mkdir -p /permanent/service/redis/conf
               CONF_FILE="/permanent/service/redis/conf/redis.conf"
-              # 🔥 해결 1: K8s 파드 스스로 호스트의 원본 tar에서 순정 암호 파일을 빼내어 복구합니다.
-              if [ ! -s "$CONF_FILE" ]; then
-                TAR_FILE="/tools/cpp_setup.tar"
-                if [ -f "$TAR_FILE" ]; then
-                  CONF_PATH=$(tar -tf "$TAR_FILE" | grep "redis.conf" | head -n 1)
-                  tar -xOf "$TAR_FILE" "$CONF_PATH" > "$CONF_FILE"
-                fi
-              fi
-              # 🔥 해결 2: 복구된 순정 파일에서 찐 비밀번호는 살려두고 포트(8831)와 통신망만 패치합니다.
+              # 🔥 해결 1: 빈 폴더를 억지로 만들지 않고, nfs-init 작업이 순정 파일을 생성할 때까지 기다립니다.
+              count=0
+              while [ ! -f "$CONF_FILE" ]; do
+                sleep 2
+                count=$((count+1))
+                if [ $count -ge 30 ]; then break; fi
+              done
+              # 🔥 해결 2: 순정 파일(찐 비밀번호가 포함됨)이 생성되면 포트(8831)와 통신망만 패치합니다.
               if [ -f "$CONF_FILE" ]; then
                 sed -i '/^bind /d' "$CONF_FILE"
                 sed -i '/^port /d' "$CONF_FILE"
@@ -63,13 +61,11 @@ spec:
                 echo "port 8831" >> "$CONF_FILE"
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
-            - name: vol-tools
-              mountPath: /tools
             {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       containers:
         - name: epp-redis
@@ -101,10 +97,6 @@ spec:
           hostPath:
             path: /var/run/docker.sock
             type: Socket
-        - name: vol-tools
-          hostPath:
-            path: /home/registry/my-service-manifests/cppm/tools
-            type: Directory
         {{- include "cppm.commonVolumes" . | nindent 8 }}
 ---
 apiVersion: v1
