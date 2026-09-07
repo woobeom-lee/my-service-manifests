@@ -45,17 +45,14 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 1. 볼륨 초기화 대비: 순정 redis.conf 뼈대 파일 강제 주입
               mkdir -p /permanent/service/redis/conf
-              if [ ! -f /permanent/service/redis/conf/redis.conf ]; then
-                cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || touch /permanent/service/redis/conf/redis.conf
-              fi
-              # 2. 통신 에러 방지 (내부 바인딩 주소를 0.0.0.0으로 개방)
-              sed -i '/bind/s/cpp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
-              sed -i '/bind/s/epp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
-              # 3. 안랩 순정 초기화 스크립트 실행 (암호 세팅 등)
+              cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || touch /permanent/service/redis/conf/redis.conf
+              # 🔥 핵심 해결: 포트 6379로 뜨는 것을 막고 8831로 강제 고정
+              sed -i '/^bind /d' /permanent/service/redis/conf/redis.conf
+              sed -i '/^port /d' /permanent/service/redis/conf/redis.conf
+              echo "bind 0.0.0.0" >> /permanent/service/redis/conf/redis.conf
+              echo "port 8831" >> /permanent/service/redis/conf/redis.conf
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              # 4. 물리 볼륨 권한 복구 및 도커 소켓 접근 권한 허용
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
@@ -66,7 +63,6 @@ spec:
         - name: epp-redis
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          # 안랩 순정 기동 스크립트 사용
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-redis.sh"]
           securityContext:
             privileged: true
@@ -108,7 +104,6 @@ spec:
     - port: 8831
       targetPort: 8831
 ---
-# 🔥 추가된 핵심 로직: Tomcat/Syslog가 옛날 이름(cpp-redis)으로 찾아와도 정상 연결해주는 서비스
 apiVersion: v1
 kind: Service
 metadata:
