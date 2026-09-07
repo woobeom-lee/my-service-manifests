@@ -45,22 +45,16 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 1. 원본 심볼릭 링크 및 초기 세팅 스크립트 실행
+              # 1. 제가 강제로 넣었던 잘못된 설정 파일 삭제 (초기화 유도)
+              rm -f /permanent/service/redis/conf/redis.conf
+              # 2. 안랩 순정 설정 파일로 복구 (순정 암호 적용)
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              # 2. redis.conf 파일에 패스워드 강제 주입
+              # 3. 통신 에러 방지용 외부 IP 바인딩만 적용
               CONF_FILE="/permanent/service/redis/conf/redis.conf"
               if [ -f "$CONF_FILE" ]; then
-                echo "Fixing redis.conf bind address..."
                 sed -i '/bind/s/cpp-redis/0.0.0.0/g' "$CONF_FILE"
-                echo "Injecting requirepass to redis.conf..."
-                if grep -q "^requirepass" "$CONF_FILE"; then
-                  sed -i 's/^requirepass.*/requirepass "wkdsksRNfjrl99!!"/g' "$CONF_FILE"
-                else
-                  echo 'requirepass "wkdsksRNfjrl99!!"' >> "$CONF_FILE"
-                fi
               fi
-              # 3. 권한 복구 및 도커 소켓 권한 부여 (에러 방지)
-              echo "Fixing permissions for Redis mounted paths & Docker socket..."
+              # 4. 권한 복구 및 소켓 에러 방지
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
@@ -71,10 +65,7 @@ spec:
         - name: epp-redis
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          # ---------- 수정된 부분 ----------
-          # 원본 실행 스크립트로 롤백 (위의 init-link에서 조작한 redis.conf를 물고 기동됨)
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-redis.sh"]
-          # --------------------------------
           securityContext:
             privileged: true
           resources:
