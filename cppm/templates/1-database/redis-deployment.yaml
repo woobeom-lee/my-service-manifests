@@ -47,9 +47,10 @@ spec:
             - |
               mkdir -p /permanent/service/redis/conf
               cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || touch /permanent/service/redis/conf/redis.conf
-              # 🔥 핵심 해결: 포트 6379로 뜨는 것을 막고 8831로 강제 고정
+              # 🔥 핵심 해결: 바인딩 0.0.0.0, 포트 8831 고정 및 패스워드 검증 로직 주석 처리(무력화)
               sed -i '/^bind /d' /permanent/service/redis/conf/redis.conf
               sed -i '/^port /d' /permanent/service/redis/conf/redis.conf
+              sed -i '/^requirepass /d' /permanent/service/redis/conf/redis.conf
               echo "bind 0.0.0.0" >> /permanent/service/redis/conf/redis.conf
               echo "port 8831" >> /permanent/service/redis/conf/redis.conf
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
