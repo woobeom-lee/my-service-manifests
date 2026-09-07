@@ -45,10 +45,16 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              # 디버깅 모드 켜기 (무엇이 실패하는지 로그에 낱낱이 남김)
+              set -x
+              # 🔥 완전 해결 1: 실제 목적지 디렉터리 강제 생성
               mkdir -p /permanent/service/redis/conf
-              mkdir -p /opt/ahnlab/cpp/service/redis/conf
+              # 🔥 완전 해결 2: 꼬여버린 심볼릭 링크를 강제로 끊고 완벽하게 재연결
+              mkdir -p /opt/ahnlab/cpp/service/redis
+              rm -rf /opt/ahnlab/cpp/service/redis/conf
+              ln -sf /permanent/service/redis/conf /opt/ahnlab/cpp/service/redis/conf
               CONF_FILE="/permanent/service/redis/conf/redis.conf"
-              # 🔥 완전 해결 1: K8s가 스스로 호스트의 cpp_setup.tar를 열어 '안랩 찐 비밀번호' 파일을 빼옵니다.
+              # 🔥 완전 해결 3: K8s가 스스로 호스트의 cpp_setup.tar를 열어 '안랩 찐 비밀번호' 파일을 빼옵니다.
               TAR_FILE="/tools/cpp_setup.tar"
               if [ -f "$TAR_FILE" ]; then
                 CONF_PATH=$(tar -tf "$TAR_FILE" | grep "redis.conf" | head -n 1)
@@ -56,14 +62,16 @@ spec:
                   tar -xOf "$TAR_FILE" "$CONF_PATH" > "$CONF_FILE"
                 fi
               fi
-              # 🔥 완전 해결 2: 복구된 파일에서 비밀번호는 유지하고, 포트(8831)와 통신(0.0.0.0)만 패치합니다.
-              if [ -f "$CONF_FILE" ]; then
+              # 🔥 완전 해결 4: 추출된 파일에서 비밀번호는 유지하고, 포트(8831)와 통신(0.0.0.0)만 패치합니다.
+              if [ -f "$CONF_FILE" ] && [ -s "$CONF_FILE" ]; then
                 sed -i '/^bind /d' "$CONF_FILE"
                 sed -i '/^port /d' "$CONF_FILE"
                 echo "bind 0.0.0.0" >> "$CONF_FILE"
                 echo "port 8831" >> "$CONF_FILE"
-                # Redis가 "파일 없다"고 죽는 것을 원천 차단하기 위해 실행 경로에 직접 꽂아 넣습니다.
-                cp "$CONF_FILE" /opt/ahnlab/cpp/service/redis/conf/redis.conf
+              else
+                # 만약 tar 압축 풀기가 실패했을 경우 파드가 기절하는 것을 막기 위한 비상용 파일
+                echo "bind 0.0.0.0" > "$CONF_FILE"
+                echo "port 8831" >> "$CONF_FILE"
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
