@@ -54,7 +54,8 @@ spec:
         - name: epp-mongo-mongos
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          command: ["/bin/bash", "/nosql/cmd/epp-mongo-mongos.sh"]
+          command: ["/usr/bin/mongos"]
+          args: ["--quiet", "-f", "/nosql/conf/mongos.conf"]
           securityContext:
             privileged: true
           resources:
