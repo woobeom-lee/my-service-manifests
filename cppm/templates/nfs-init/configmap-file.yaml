@@ -85,13 +85,15 @@ data:
       cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
       sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
     fi
-    echo "=== [K8s Patch 3] Postgres pg_hba.conf K8s 네트워크 오픈 ==="
+    echo "=== [K8s Patch 3] Postgres 초기화 무적(Trust) 모드 및 네트워크 오픈 ==="
     PG_HBA=$(find /nfs/database /nfs/permanent -name "pg_hba.conf" 2>/dev/null | head -n 1)
-    if [ -n "$PG_HBA" ] && ! grep -q "hostnossl.*0.0.0.0/0" "$PG_HBA"; then
-      echo "hostnossl all all 0.0.0.0/0 md5" >> "$PG_HBA"
-      echo "hostnossl all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
-      echo "host all all 0.0.0.0/0 md5" >> "$PG_HBA"
-      echo "host all all 0.0.0.0/0 scram-sha-256" >> "$PG_HBA"
+    if [ -n "$PG_HBA" ]; then
+      sed -i 's/md5/trust/g' "$PG_HBA"
+      sed -i 's/scram-sha-256/trust/g' "$PG_HBA"
+      if ! grep -q "0.0.0.0/0.*trust" "$PG_HBA"; then
+        echo "hostnossl all all 0.0.0.0/0 trust" >> "$PG_HBA"
+        echo "host all all 0.0.0.0/0 trust" >> "$PG_HBA"
+      fi
     fi
     echo "=== [K8s Patch 4] Mongo Shard 데이터 디렉터리 완벽 초기화 ==="
     rm -rf /nfs/nosql/data/shardsvr/*
@@ -106,10 +108,10 @@ data:
     echo 'wait $XVFB_PID' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
  
     echo "=== [K8s Patch 6] 컴포넌트 하드코딩 도메인(cpp-) -> K8s 주소(epp-) 일괄 치환 ==="
-    # 몽고DB 도메인 교정
     sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/conf/mongos.conf 2>/dev/null || true
-    # Postgres, PgBouncer, Redis, Kafka 도메인 교정
     find /nfs/opt/ahnlab/cpp/setting/ /nfs/permanent/ -type f \( -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.xml" -o -name "*.cfg" -o -name "*.conf" \) -exec sed -i 's/cpp-postgres/epp-postgres/g; s/cpp-pgbouncer/epp-pgbouncer/g; s/cpp-redis/epp-redis/g; s/cpp-kafka/epp-kafka/g' {} + 2>/dev/null || true
+    echo "=== [K8s Patch 7] PgBouncer 초기화 무적(Trust) 모드 패치 ==="
+    find /nfs/permanent/service/pgbouncer/conf/ -name "*.cfg" -exec sed -i 's/auth_type = scram-sha-256/auth_type = trust/g; s/auth_type = md5/auth_type = trust/g' {} + 2>/dev/null || true
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
@@ -117,7 +119,7 @@ data:
     chmod -R 700 /nfs/database /nfs/nosql 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
-    echo "=== [K8s Patch 7] 리소스 권한 부여 ==="
+    echo "=== [K8s Patch 8] 리소스 권한 부여 ==="
     chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
     chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
     chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
