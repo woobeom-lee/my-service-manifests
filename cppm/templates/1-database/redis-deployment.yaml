@@ -45,13 +45,19 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if [ -f /permanent/service/redis/conf/redis.conf ]; then
-                echo "Fixing redis.conf bind address to 0.0.0.0..."
-                sed -i '/bind/s/cpp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
+              # 1. 파일 강제 복구: 안랩 원본 이미지에서 순정 redis.conf를 뜯어와서 물리 볼륨에 채워넣습니다.
+              mkdir -p /permanent/service/redis/conf
+              if [ ! -f /permanent/service/redis/conf/redis.conf ]; then
+                cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || touch /permanent/service/redis/conf/redis.conf
               fi
+              # 2. 통신 에러 방지용 0.0.0.0 주소 바인딩
+              sed -i '/bind/s/cpp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
+              sed -i '/bind/s/epp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
+              # 3. 기존 링크 스크립트 정상 실행
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              echo "Fixing permissions for Redis mounted paths..."
+              # 4. 권한 복구 및 도커 소켓 오픈
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
+              if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
