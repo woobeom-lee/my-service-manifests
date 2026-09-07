@@ -44,7 +44,7 @@ spec:
             - "-c"
             - |
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh
-              echo "Fixing permissions for MGR mounted paths..."
+              echo "Fixing permissions for MGR mounted paths & Docker socket..."
               mkdir -p /opt/repo /new /permanent/save /nosql /database /tmp /var/log /home /var/run/postgresql
               rm -rf /tmp/hsperfdata_* || true
               echo "/permanent" > /opt/.epp_storage_path
@@ -52,6 +52,9 @@ spec:
               echo "/permanent" > /opt/ahnlab/cpp/.epp_storage_path
               chown 2500:2500 /opt/.epp_storage_path /permanent/save/epp_storage_path /opt/ahnlab/cpp/.epp_storage_path || true
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              # ---------- 추가된 부분: 도커 소켓 권한 에러 해결 ----------
+              if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
+              # -----------------------------------------------------------
           volumeMounts:
             - name: tmpfs-ahnlab
               mountPath: /opt/ahnlab
