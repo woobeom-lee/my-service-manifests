@@ -50,8 +50,9 @@ spec:
                 sed -i '/bind/s/cpp-redis/0.0.0.0/g' /permanent/service/redis/conf/redis.conf
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              echo "Fixing permissions for Redis mounted paths..."
+              echo "Fixing permissions for Redis mounted paths & Docker socket..."
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
+              if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
@@ -60,7 +61,11 @@ spec:
         - name: epp-redis
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-redis.sh"]
+          # ---------- 수정된 부분 ----------
+          # epp-redis.sh 스크립트를 우회하고, 비밀번호를 직접 주입하여 강제로 띄웁니다.
+          command: ["/opt/ahnlab/epp/nosql/bin/redis-server"]
+          args: ["/nosql/conf/redis.conf", "--requirepass", "wkdsksRNfjrl99!!", "--daemonize", "no"]
+          # --------------------------------
           securityContext:
             privileged: true
           resources:
