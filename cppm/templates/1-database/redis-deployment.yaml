@@ -47,12 +47,14 @@ spec:
             - |
               mkdir -p /permanent/service/redis/conf
               cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || touch /permanent/service/redis/conf/redis.conf
-              # 🔥 핵심 해결: 바인딩 0.0.0.0, 포트 8831 고정 및 패스워드 검증 로직 주석 처리(무력화)
+              # 🔥 핵심 해결: 패스워드 없는 외부 접속을 허용하기 위해 protected-mode 해제 추가
               sed -i '/^bind /d' /permanent/service/redis/conf/redis.conf
               sed -i '/^port /d' /permanent/service/redis/conf/redis.conf
               sed -i '/^requirepass /d' /permanent/service/redis/conf/redis.conf
+              sed -i '/^protected-mode /d' /permanent/service/redis/conf/redis.conf
               echo "bind 0.0.0.0" >> /permanent/service/redis/conf/redis.conf
               echo "port 8831" >> /permanent/service/redis/conf/redis.conf
+              echo "protected-mode no" >> /permanent/service/redis/conf/redis.conf
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
