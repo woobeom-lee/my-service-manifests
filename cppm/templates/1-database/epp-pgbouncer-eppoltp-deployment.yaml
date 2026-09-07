@@ -6,7 +6,7 @@ metadata:
   labels:
     app: epp-pgbouncer-eppoltp
 spec:
-  replicas: {{ .Values.database.pgbouncer.replicas }}
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -20,6 +20,9 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-pgbouncer-eppoltp
+      securityContext:
+        runAsUser: 2500
+        runAsGroup: 2500
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
@@ -31,11 +34,6 @@ spec:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
             - "epp-mgr"
-            - "cpp-tomcat-auth"
-            - "cpp-tomcat-console"
-            - "cpp-nginx"
-            - "cpp-scheduler"
-            - "cpp-batch-processor"
       initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -47,20 +45,19 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "Checking Postgres DB connectivity on host port 8817..."
-              until true || timeout 1 bash -c "</dev/tcp/127.0.0.1/8817" 2>/dev/null; do
-                echo "Database is not ready yet, waiting 3 seconds..."
-                sleep 3
-              done
-              echo "Database connected successfully! Starting AhnLab setup..."
-              # 🚀 Sudoers 권한 에러 원천 차단 (파드가 스스로 440 고정)
-              if [ -f /etc/sudoers ]; then chmod 440 /etc/sudoers; chown root:root /etc/sudoers; fi
-              if [ -f /etc/login.defs ]; then chmod 440 /etc/login.defs; chown root:root /etc/login.defs; fi
- 
+              # 🔥 핵심 1: 충돌(Crash)을 일으키는 과거 찌꺼기 소켓 파일 무조건 삭제
+              find /permanent /tmp /database -name ".s.PGSQL.8819*" -delete 2>/dev/null || true
+              find /permanent /tmp /database -name ".s.PGSQL.8817*" -delete 2>/dev/null || true
+              # 안랩 순정 설정 스크립트 실행
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              echo "Fixing permissions for PgBouncer mounted paths..."
-              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              # 🔥 핵심 2: PgBouncer 외부 접속(0.0.0.0) 허용 설정 주입
+              CONF_FILE="/permanent/service/pgbouncer/conf/pgbouncer-cppoltp.cfg"
+              if [ -f "$CONF_FILE" ]; then
+                sed -i 's/^listen_addr.*/listen_addr = 0.0.0.0/g' "$CONF_FILE"
+              fi
+              # 권한 복구 및 도커 소켓 권한 허용
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
@@ -71,13 +68,12 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-pgbouncer-eppoltp.sh"]
           securityContext:
-            runAsUser: 2500
-            privileged: false
+            privileged: true
           resources:
             requests:
               memory: "256Mi"
             limits:
-              memory: "1Gi"
+              memory: "512Mi"
           ports:
             - containerPort: 8819
           env:
@@ -86,9 +82,9 @@ spec:
             - name: CONTAINER_NAME
               value: "cpp-pgbouncer-eppoltp"
             - name: DOCKER_HOST
-              value: "unix:///var/run/docker.sock"
+              value: "tcp://127.0.0.1:2375"
             - name: JAVA_TOOL_OPTIONS
-              value: "-Xms256m -Xmx512m -Dfile.encoding=UTF-8 -Dlogging.config=file:///permanent/etc/config/log4j2.xml -Dlog4j2.configurationFile=file:///permanent/etc/config/log4j2.xml   -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true  "
+              value: "-Xms192m -Xmx192m -Dfile.encoding=UTF-8 -Dlogging.config=file:///permanent/etc/config/log4j2.xml -Dlog4j2.configurationFile=file:///permanent/etc/config/log4j2.xml -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true"
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
@@ -112,3 +108,31 @@ spec:
   ports:
     - port: 8819
       targetPort: 8819
+---
+# 🔥 핵심 3: Tomcat이 옛날 이름(cpp-)으로 찾아와도 문지기(PgBouncer)로 정상 연결해주는 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpp-pgbouncer-eppoltp
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: epp-pgbouncer-eppoltp
+  ports:
+    - port: 8819
+      targetPort: 8819
+---
+# 🔥 핵심 4: DB 본체(Postgres)도 옛날 이름(cpp-)으로 정상 연결해주는 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpp-postgres-eppoltp
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: epp-postgres-eppoltp
+  ports:
+    - port: 8817
+      targetPort: 8817
