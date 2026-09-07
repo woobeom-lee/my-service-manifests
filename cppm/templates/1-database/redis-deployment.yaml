@@ -46,14 +46,21 @@ spec:
             - "-c"
             - |
               mkdir -p /permanent/service/redis/conf
-              # 🔥 핵심 1: 순정 파일 복사 (여기에 안랩 찐 비밀번호가 들어있습니다!)
-              cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || true
-              # 🔥 핵심 2: 비밀번호(requirepass)는 절대 건드리지 않고 포트와 바인딩만 교체합니다.
-              if [ -f /permanent/service/redis/conf/redis.conf ]; then
-                sed -i '/^bind /d' /permanent/service/redis/conf/redis.conf
-                sed -i '/^port /d' /permanent/service/redis/conf/redis.conf
-                echo "bind 0.0.0.0" >> /permanent/service/redis/conf/redis.conf
-                echo "port 8831" >> /permanent/service/redis/conf/redis.conf
+              CONF_FILE="/permanent/service/redis/conf/redis.conf"
+              # 🔥 해결 1: K8s 파드 스스로 호스트의 원본 tar에서 순정 암호 파일을 빼내어 복구합니다.
+              if [ ! -s "$CONF_FILE" ]; then
+                TAR_FILE="/tools/cpp_setup.tar"
+                if [ -f "$TAR_FILE" ]; then
+                  CONF_PATH=$(tar -tf "$TAR_FILE" | grep "redis.conf" | head -n 1)
+                  tar -xOf "$TAR_FILE" "$CONF_PATH" > "$CONF_FILE"
+                fi
+              fi
+              # 🔥 해결 2: 복구된 순정 파일에서 찐 비밀번호는 살려두고 포트(8831)와 통신망만 패치합니다.
+              if [ -f "$CONF_FILE" ]; then
+                sed -i '/^bind /d' "$CONF_FILE"
+                sed -i '/^port /d' "$CONF_FILE"
+                echo "bind 0.0.0.0" >> "$CONF_FILE"
+                echo "port 8831" >> "$CONF_FILE"
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
@@ -61,6 +68,8 @@ spec:
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
+            - name: vol-tools
+              mountPath: /tools
             {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       containers:
         - name: epp-redis
@@ -92,6 +101,10 @@ spec:
           hostPath:
             path: /var/run/docker.sock
             type: Socket
+        - name: vol-tools
+          hostPath:
+            path: /home/registry/my-service-manifests/cppm/tools
+            type: Directory
         {{- include "cppm.commonVolumes" . | nindent 8 }}
 ---
 apiVersion: v1
