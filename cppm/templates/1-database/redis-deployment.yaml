@@ -45,12 +45,15 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 🔥 핵심: 억지로 파일을 복사하지 않고, nfs-init이 만든 순정 암호 파일을 유지합니다.
-              # 오직 톰캣이 통신할 수 있게 bind 0.0.0.0만 열어줍니다.
-              CONF_FILE="/permanent/service/redis/conf/redis.conf"
-              if [ -f "$CONF_FILE" ]; then
-                sed -i '/^bind /d' "$CONF_FILE"
-                echo "bind 0.0.0.0" >> "$CONF_FILE"
+              mkdir -p /permanent/service/redis/conf
+              # 🔥 핵심 1: 순정 파일 복사 (여기에 안랩 찐 비밀번호가 들어있습니다!)
+              cp /opt/ahnlab/cpp/service/redis/conf/redis.conf /permanent/service/redis/conf/redis.conf 2>/dev/null || true
+              # 🔥 핵심 2: 비밀번호(requirepass)는 절대 건드리지 않고 포트와 바인딩만 교체합니다.
+              if [ -f /permanent/service/redis/conf/redis.conf ]; then
+                sed -i '/^bind /d' /permanent/service/redis/conf/redis.conf
+                sed -i '/^port /d' /permanent/service/redis/conf/redis.conf
+                echo "bind 0.0.0.0" >> /permanent/service/redis/conf/redis.conf
+                echo "port 8831" >> /permanent/service/redis/conf/redis.conf
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
