@@ -82,6 +82,8 @@ spec:
           env:
             - name: REDIS_PASSWORD
               value: "cppm123!"
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
@@ -182,6 +184,8 @@ spec:
           env:
             - name: REDIS_PASSWORD
               value: "cppm123!"
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
@@ -280,6 +284,8 @@ spec:
           ports:
             - containerPort: 8823
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: REDIS_PASSWORD
               value: "cppm123!"
             - name: TZ

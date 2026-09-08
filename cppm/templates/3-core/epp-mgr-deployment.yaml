@@ -106,6 +106,8 @@ spec:
           env:
             - name: REDIS_PASSWORD
               value: "cppm123!"
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

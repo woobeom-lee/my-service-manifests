@@ -41,6 +41,8 @@ spec:
           env:
             - name: REDIS_PASSWORD
               value: "cppm123!"
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: SPRING_REDIS_HOST
               value: "epp-redis"
             - name: TZ
