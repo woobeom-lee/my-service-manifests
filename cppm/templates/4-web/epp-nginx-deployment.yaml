@@ -98,6 +98,8 @@ spec:
             - containerPort: 8809
             - containerPort: 8810
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

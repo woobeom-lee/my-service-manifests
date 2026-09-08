@@ -50,6 +50,8 @@ spec:
           ports:
             - containerPort: 8817
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
           lifecycle:

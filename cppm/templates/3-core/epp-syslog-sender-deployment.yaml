@@ -39,6 +39,8 @@ spec:
             runAsUser: 0
             privileged: true
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: SPRING_REDIS_HOST
               value: "epp-redis"
             - name: TZ

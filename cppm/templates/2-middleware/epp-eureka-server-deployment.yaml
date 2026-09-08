@@ -41,6 +41,8 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["java", "-jar", "/service-eureka-server-0.0.1.jar"]
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: EUREKA_SERVER_HOSTNAME

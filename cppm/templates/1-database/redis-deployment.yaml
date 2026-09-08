@@ -48,7 +48,6 @@ spec:
               mkdir -p /permanent/service/redis/conf
               mkdir -p /opt/ahnlab/cpp/service/redis/conf
               CONF_FILE="/permanent/service/redis/conf/redis.conf"
-              # 1. cpp_setup.tar 에서 원본 redis.conf 추출
               TAR_FILE="/tools/cpp_setup.tar"
               if [ -f "$TAR_FILE" ]; then
                 CONF_PATH=$(tar -tf "$TAR_FILE" | grep "redis.conf" | head -n 1)
@@ -56,13 +55,16 @@ spec:
                   tar -xOf "$TAR_FILE" "$CONF_PATH" > "$CONF_FILE"
                 fi
               fi
-              # 🔥 해결: 안랩 순정 비밀번호(requirepass)는 절대 건드리지 않고 그대로 유지합니다!
-              # 오직 통신망(0.0.0.0)과 포트(8831)만 패치합니다.
+              # 🔥 핵심: Redis가 톰캣의 인증을 통과시켜주도록 '가짜 비밀번호'를 주입합니다.
               if [ -f "$CONF_FILE" ]; then
                 sed -i '/^bind /d' "$CONF_FILE"
                 sed -i '/^port /d' "$CONF_FILE"
+                sed -i '/^protected-mode /d' "$CONF_FILE"
+                sed -i '/^requirepass /d' "$CONF_FILE"
                 echo "bind 0.0.0.0" >> "$CONF_FILE"
                 echo "port 8831" >> "$CONF_FILE"
+                echo "protected-mode no" >> "$CONF_FILE"
+                echo "requirepass cppm123!" >> "$CONF_FILE"
                 cp "$CONF_FILE" /opt/ahnlab/cpp/service/redis/conf/redis.conf
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
@@ -87,6 +89,8 @@ spec:
           ports:
             - containerPort: 8831
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

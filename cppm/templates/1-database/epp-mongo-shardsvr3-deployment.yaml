@@ -51,6 +51,8 @@ spec:
           securityContext:
             runAsUser: 2500
           env:
+            - name: REDIS_PASSWORD
+              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
           volumeMounts:
