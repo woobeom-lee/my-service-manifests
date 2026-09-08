@@ -6,7 +6,7 @@ metadata:
   labels:
     app: epp-postgres-eppoltp
 spec:
-  replicas: {{ .Values.database.postgres.replicas }}
+  replicas: 1
   strategy:
     type: Recreate
   selector:
@@ -19,13 +19,17 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      hostname: cpp-postgres-eppoltp
+      securityContext:
+        runAsUser: 2500
+        runAsGroup: 2500
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       initContainers:
-        - name: init-permissions
+        - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
           securityContext:
@@ -35,23 +39,26 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              mkdir -p /database/15/cppoltpdata
-              chown -R 2500:2500 /database
-              chown -R 2500:2500 /var/run/postgresql
-              chmod 700 /database/15/cppoltpdata
+              bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
+          volumeMounts:
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            - name: vol-tools
+              mountPath: /tools
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       containers:
-        - name: postgres
+        - name: epp-postgres-eppoltp
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
-          command: ["/bin/bash", "/database/cmd/epp-postgres-eppoltp.sh"]
+          command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-postgres-eppoltp.sh"]
           securityContext:
             privileged: true
-            runAsUser: 2500
           ports:
             - containerPort: 8817
-          env:
-            - name: TZ
-              value: "Asia/Seoul"
+          # 🔥 K8s Native 방화벽 영구 개방 로직
+          # 파드가 기동될 때마다 자동으로 실행되어 pg_hba.conf를 찾고 통과 룰을 찔러 넣습니다.
           lifecycle:
             postStart:
               exec:
@@ -59,29 +66,40 @@ spec:
                   - "/bin/bash"
                   - "-c"
                   - |
-                    for i in {1..30}; do
-                      if psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "SELECT 1;" > /dev/null 2>&1; then
-                        echo "Database is ready. Executing license bypass queries..."
-                        psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
-                        psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
-                        break
-                      fi
-                      sleep 2
-                    done
+                    (
+                      for i in {1..30}; do
+                        HBA_FILE=$(find /permanent /opt -name "pg_hba.conf" 2>/dev/null | grep -E "postgres|eppoltp" | head -n 1)
+                        if [ -n "$HBA_FILE" ]; then
+                          if ! grep -q "0.0.0.0/0.*trust" "$HBA_FILE"; then
+                            echo "host    all             all             0.0.0.0/0               md5" >> "$HBA_FILE"
+                            echo "host    all             all             0.0.0.0/0               trust" >> "$HBA_FILE"
+                            # Postgres 백그라운드 실시간 리로드 (재시작 불필요)
+                            kill -HUP 1 || true
+                          fi
+                          break
+                        fi
+                        sleep 2
+                      done
+                    ) &
+          env:
+            - name: TZ
+              value: "Asia/Seoul"
+            - name: CONTAINER_NAME
+              value: "cpp-postgres-eppoltp"
           volumeMounts:
-            - name: vol-database
-              mountPath: /database
-            - name: vol-var-postgres
-              mountPath: /var/run/postgresql
+            - name: vol-docker-sock
+              mountPath: /var/run/docker.sock
+            {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       volumes:
-        - name: vol-database
+        - name: vol-docker-sock
           hostPath:
-            path: {{ .Values.global.ahnfsBasePath }}/database
-            type: DirectoryOrCreate
-        - name: vol-var-postgres
+            path: /var/run/docker.sock
+            type: Socket
+        - name: vol-tools
           hostPath:
-            path: {{ .Values.global.ahnfsBasePath }}/var/run/postgresql
-            type: DirectoryOrCreate
+            path: /home/registry/my-service-manifests/cppm/tools
+            type: Directory
+        {{- include "cppm.commonVolumes" . | nindent 8 }}
 ---
 apiVersion: v1
 kind: Service
