@@ -228,6 +228,8 @@ spec:
             - containerPort: 8806
 
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
 
             - name: TZ
 

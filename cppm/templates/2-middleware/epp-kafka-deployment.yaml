@@ -35,6 +35,8 @@ spec:
               echo 'validate_version() { true; }' >> /opt/bitnami/scripts/libversion.sh
               exec /opt/bitnami/scripts/kafka/entrypoint.sh /opt/bitnami/scripts/kafka/run.sh
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: JAVA_TOOL_OPTIONS
               value: "-Xms256m -Xmx512m"
             - name: TZ

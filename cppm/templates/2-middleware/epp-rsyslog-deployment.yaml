@@ -38,6 +38,8 @@ spec:
             privileged: true
           command: ["/bin/bash", "/opt/ahnlab/cpp/cmd/epp-rsyslog.sh"]
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

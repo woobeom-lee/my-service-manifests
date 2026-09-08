@@ -82,6 +82,8 @@ spec:
                       done
                     ) &
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

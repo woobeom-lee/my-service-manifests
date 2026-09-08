@@ -80,6 +80,8 @@ spec:
           ports:
             - containerPort: 8821
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
@@ -178,6 +180,8 @@ spec:
           ports:
             - containerPort: 8822
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
@@ -276,6 +280,8 @@ spec:
           ports:
             - containerPort: 8823
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME

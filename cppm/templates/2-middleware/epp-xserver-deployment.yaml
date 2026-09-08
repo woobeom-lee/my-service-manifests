@@ -40,6 +40,8 @@ spec:
               echo "==> Xvfb installation done. Starting epp-xserver.sh..."
               exec /opt/ahnlab/cpp/cmd/epp-xserver.sh
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
           volumeMounts:

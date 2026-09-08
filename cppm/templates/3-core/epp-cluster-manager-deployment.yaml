@@ -68,6 +68,8 @@ spec:
             runAsUser: 0
             privileged: true
           env:
+            - name: REDIS_PASSWORD
+              value: "qwe123"
             - name: TZ
               value: "Asia/Seoul"
             - name: JAVA_TOOL_OPTIONS
