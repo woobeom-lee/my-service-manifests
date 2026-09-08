@@ -69,7 +69,7 @@ spec:
                           if ! grep -q "0.0.0.0/0.*trust" "$HBA_FILE"; then
                             echo "host    all             all             0.0.0.0/0               md5" >> "$HBA_FILE"
                             echo "host    all             all             0.0.0.0/0               trust" >> "$HBA_FILE"
-                            kill -HUP 1 || true
+                            psql -h 127.0.0.1 -p 8817 -U postgres -c "SELECT pg_reload_conf();" || true
                           fi
                           break
                         fi
