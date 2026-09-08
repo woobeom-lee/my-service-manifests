@@ -59,13 +59,9 @@ spec:
               if [ -f "$CONF_FILE" ]; then
                 sed -i '/^bind /d' "$CONF_FILE"
                 sed -i '/^port /d' "$CONF_FILE"
-                sed -i '/^protected-mode /d' "$CONF_FILE"
-                sed -i '/^requirepass /d' "$CONF_FILE"
-                # 🔥 최후의 수단: 0.0.0.0 바인딩과 암호 설정을 유지하면서, Redis 파드가 어떤 IP 요청이든 무조건 수락하도록 만듭니다.
+                # 🔥 핵심: requirepass(안랩 순정 비밀번호)는 절대 건드리지 않고 그대로 둡니다!!
                 echo "bind 0.0.0.0" >> "$CONF_FILE"
                 echo "port 8831" >> "$CONF_FILE"
-                echo "protected-mode no" >> "$CONF_FILE"
-                echo "requirepass cppm123!" >> "$CONF_FILE"
                 cp "$CONF_FILE" /opt/ahnlab/cpp/service/redis/conf/redis.conf
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
