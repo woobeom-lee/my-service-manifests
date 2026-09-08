@@ -75,6 +75,8 @@ spec:
           ports:
             - containerPort: 8808
           env:
+            - name: REDIS_PASSWORD
+              value: ""
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
