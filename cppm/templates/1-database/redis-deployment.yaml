@@ -45,11 +45,8 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              set -x
               mkdir -p /permanent/service/redis/conf
-              mkdir -p /opt/ahnlab/cpp/service/redis
-              rm -rf /opt/ahnlab/cpp/service/redis/conf
-              ln -sf /permanent/service/redis/conf /opt/ahnlab/cpp/service/redis/conf
+              mkdir -p /opt/ahnlab/cpp/service/redis/conf
               CONF_FILE="/permanent/service/redis/conf/redis.conf"
               TAR_FILE="/tools/cpp_setup.tar"
               if [ -f "$TAR_FILE" ]; then
@@ -58,20 +55,16 @@ spec:
                   tar -xOf "$TAR_FILE" "$CONF_PATH" > "$CONF_FILE"
                 fi
               fi
-              # 🔥 해결: protected-mode no 추가
-              if [ -f "$CONF_FILE" ] && [ -s "$CONF_FILE" ]; then
+              # 🔥 고객님 분석 반영: protected-mode no 명시 및 비밀번호(requirepass) 완전 제거
+              if [ -f "$CONF_FILE" ]; then
                 sed -i '/^bind /d' "$CONF_FILE"
                 sed -i '/^port /d' "$CONF_FILE"
                 sed -i '/^protected-mode /d' "$CONF_FILE"
+                sed -i '/^requirepass /d' "$CONF_FILE"
                 echo "bind 0.0.0.0" >> "$CONF_FILE"
                 echo "port 8831" >> "$CONF_FILE"
                 echo "protected-mode no" >> "$CONF_FILE"
-                # 💡 만약 [옵션 B]를 선택하셨다면 아래 주석을 해제하고 암호를 입력하세요.
-                # echo "requirepass 실제비밀번호" >> "$CONF_FILE"
-              else
-                echo "bind 0.0.0.0" > "$CONF_FILE"
-                echo "port 8831" >> "$CONF_FILE"
-                echo "protected-mode no" >> "$CONF_FILE"
+                cp "$CONF_FILE" /opt/ahnlab/cpp/service/redis/conf/redis.conf
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
