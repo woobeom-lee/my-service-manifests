@@ -34,6 +34,7 @@ spec:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
             - "epp-mgr"
+            - "cpp-redis"
       initContainers:
         - name: init-link
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -55,12 +56,12 @@ spec:
                   tar -xOf "$TAR_FILE" "$CONF_PATH" > "$CONF_FILE"
                 fi
               fi
-              # 🔥 핵심: Redis가 톰캣의 인증을 통과시켜주도록 '가짜 비밀번호'를 주입합니다.
               if [ -f "$CONF_FILE" ]; then
                 sed -i '/^bind /d' "$CONF_FILE"
                 sed -i '/^port /d' "$CONF_FILE"
                 sed -i '/^protected-mode /d' "$CONF_FILE"
                 sed -i '/^requirepass /d' "$CONF_FILE"
+                # 🔥 최후의 수단: 0.0.0.0 바인딩과 암호 설정을 유지하면서, Redis 파드가 어떤 IP 요청이든 무조건 수락하도록 만듭니다.
                 echo "bind 0.0.0.0" >> "$CONF_FILE"
                 echo "port 8831" >> "$CONF_FILE"
                 echo "protected-mode no" >> "$CONF_FILE"
@@ -89,10 +90,6 @@ spec:
           ports:
             - containerPort: 8831
           env:
-            - name: REDIS_PASSWORD
-              value: "cppm123!"
-            - name: REDIS_PASSWORD
-              value: "cppm123!"
             - name: TZ
               value: "Asia/Seoul"
             - name: CONTAINER_NAME
