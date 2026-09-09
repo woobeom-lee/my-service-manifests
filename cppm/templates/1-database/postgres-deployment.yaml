@@ -77,7 +77,7 @@ spec:
  
                       # 2. 안랩 원본 라이선스 패치 로직 (보존됨)
                       for i in {1..30}; do
-                        if psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "SELECT 1;" > /dev/null 2>&1; then
+                        if psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
                           echo "Database is ready. Executing license bypass queries..."
                           psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
                           psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
