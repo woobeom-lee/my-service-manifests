@@ -53,8 +53,8 @@ spec:
               rm -rf /opt/ahnlab/cpp/log /opt/ahnlab/cpp/etc /opt/ahnlab/cpp/java /opt/ahnlab/cpp/pg /opt/ahnlab/cpp/save /opt/ahnlab/cpp/pkgroot /opt/ahnlab/cpp/stat 2>/dev/null || true
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               echo "Fixing permissions for Scheduler mounted paths..."
-              mkdir -p /opt/repo /new /permanent /nosql /tmp /var/log /home
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock
@@ -70,7 +70,7 @@ spec:
               mountPath: /nosql
               subPath: nosql
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /database
               subPath: database
             - name: vol-ahnfs-root
               mountPath: /tmp
@@ -129,7 +129,7 @@ spec:
               mountPath: /nosql
               subPath: nosql
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /database
               subPath: database
             - name: vol-ahnfs-root
               mountPath: /tmp
@@ -165,7 +165,7 @@ spec:
               mountPath: /var/log
               subPath: var/log
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /var/run/postgresql
               subPath: var/run/postgresql
             - name: vol-ahnfs-root
               mountPath: /opt/repo

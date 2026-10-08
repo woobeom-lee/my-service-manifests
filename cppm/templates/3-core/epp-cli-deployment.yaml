@@ -59,7 +59,7 @@ spec:
               mountPath: /nosql
               subPath: nosql
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /database
               subPath: database
             - name: vol-ahnfs-root
               mountPath: /tmp
@@ -95,7 +95,7 @@ spec:
               mountPath: /var/log
               subPath: var/log
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /var/run/postgresql
               subPath: var/run/postgresql
             - name: vol-ahnfs-root
               mountPath: /opt/repo

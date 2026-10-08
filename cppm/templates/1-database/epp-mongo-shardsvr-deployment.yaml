@@ -55,14 +55,14 @@ spec:
               echo "Database connected successfully! Starting AhnLab setup..."
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               echo "Fixing permissions for ShardSvr mounted paths..."
-              mkdir -p /opt/repo /new /permanent /nosql /tmp /var/log /home
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
               echo "Creating shardsvr data directory..."
               mkdir -p /nosql/data/shardsvr
               echo "Securing mongo_key permissions to 600..."
               if [ -f /nosql/conf/mongo_key ]; then
                 chmod 600 /nosql/conf/mongo_key
               fi
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock

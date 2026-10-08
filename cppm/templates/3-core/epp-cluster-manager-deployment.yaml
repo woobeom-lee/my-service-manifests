@@ -84,7 +84,7 @@ spec:
             - name: vol-nosql
               mountPath: /nosql
             - name: vol-database
-              mountPath:
+              mountPath: /database
             - name: vol-tmp
               mountPath: /tmp
             - name: vol-home

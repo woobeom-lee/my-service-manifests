@@ -56,8 +56,8 @@ spec:
               echo "Database connected successfully! Starting AhnLab setup..."
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               echo "Fixing permissions for AuthSvr mounted paths..."
-              mkdir -p /opt/repo /new /permanent /nosql /tmp /var/log /home
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true
+              mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
  
       containers:
         - name: epp-tomcat-auth
@@ -100,7 +100,7 @@ spec:
               mountPath: /nosql
               subPath: nosql
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /database
               subPath: database
             - name: vol-ahnfs-root
               mountPath: /tmp
@@ -136,7 +136,7 @@ spec:
               mountPath: /var/log
               subPath: var/log
             - name: vol-ahnfs-root
-              mountPath:
+              mountPath: /var/run/postgresql
               subPath: var/run/postgresql
             - name: vol-ahnfs-root
               mountPath: /opt/repo

@@ -47,7 +47,7 @@ spec:
             - |
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               echo "Fixing permissions for Mongo mounted paths..."
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql
           volumeMounts:
             {{- include "cppm.commonVolumeMounts" . | nindent 12 }}
       containers:
