@@ -36,8 +36,8 @@ spec:
             - "-c"
             - |
               mkdir -p /database/15/cppoltpdata
-              chown -R 2500:2500 /database
-              chown -R 2500:2500 /var/run/postgresql
+          chown -R 26:26 /database
+          chown -R 26:26 /var/run/postgresql
               chmod 700 /database/15/cppoltpdata
       containers:
         - name: postgres
@@ -46,7 +46,7 @@ spec:
           command: ["/bin/bash", "/database/cmd/epp-postgres-eppoltp.sh"]
           securityContext:
             privileged: true
-            runAsUser: 2500
+            runAsUser: 26 
           ports:
             - containerPort: 8817
           env:
