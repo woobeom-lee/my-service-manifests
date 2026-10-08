@@ -37,6 +37,8 @@ spec:
             - |
               mkdir -p /database/15/cppoltpdata
                 chown -R 26:26 /database
+                chmod -R 700 /database/cmd
+                chmod -R 700 /database/cmd
                 chown -R 26:26 /var/run/postgresql
               chmod 700 /database/15/cppoltpdata
       containers:
