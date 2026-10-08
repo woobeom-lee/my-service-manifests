@@ -1,0 +1,26 @@
+FROM ghcr.io/woobeom-lee/cpp-platform:9-16-25
+ 
+USER root
+ 
+# 1. 사내망 찌꺼기 완벽 삭제
+RUN rm -rf /etc/yum.repos.d/*
+ 
+# 2. 에러가 나지 않도록 한 줄씩 안전하게 퍼블릭 Repo 작성
+RUN echo "[baseos]" > /etc/yum.repos.d/public.repo && \
+    echo "name=BaseOS" >> /etc/yum.repos.d/public.repo && \
+    echo "baseurl=https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os/" >> /etc/yum.repos.d/public.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/public.repo && \
+    echo "[appstream]" >> /etc/yum.repos.d/public.repo && \
+    echo "name=AppStream" >> /etc/yum.repos.d/public.repo && \
+    echo "baseurl=https://dl.rockylinux.org/pub/rocky/9/AppStream/x86_64/os/" >> /etc/yum.repos.d/public.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/public.repo && \
+    echo "[epel]" >> /etc/yum.repos.d/public.repo && \
+    echo "name=EPEL" >> /etc/yum.repos.d/public.repo && \
+    echo "baseurl=https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/" >> /etc/yum.repos.d/public.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/public.repo
+ 
+# 3. 퍼블릭망에서 Xvfb 초고속 설치
+RUN dnf clean all && dnf install -y xorg-x11-server-Xvfb
+ 
+# 4. Xvfb 다이렉트 실행
+CMD ["/usr/bin/Xvfb", ":99", "-ac", "-screen", "0", "1280x1024x24", "-nolisten", "tcp"]

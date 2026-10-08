@@ -1,0 +1,4 @@
+FROM ghcr.io/woobeom-lee/cpp-platform:9-16-25
+COPY tools/init_schema.sh /scripts/
+COPY tools/schema/ /scripts/schema/
+CMD ["/bin/bash", "/scripts/init_schema.sh"]

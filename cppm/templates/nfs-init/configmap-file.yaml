@@ -86,7 +86,7 @@ data:
       sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
     fi
     echo "=== [K8s Patch 3] Postgres 초기화 무적(Trust) 모드 및 네트워크 오픈 ==="
-    PG_HBA=$(find /nfs/database /nfs/permanent -name "pg_hba.conf" 2>/dev/null | head -n 1)
+    PG_HBA=$(find /nfs/permanent -name "pg_hba.conf" 2>/dev/null | head -n 1)
     if [ -n "$PG_HBA" ]; then
       sed -i 's/md5/trust/g' "$PG_HBA"
       sed -i 's/scram-sha-256/trust/g' "$PG_HBA"
@@ -106,7 +106,6 @@ data:
     echo 'XVFB_PID=$!' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
     echo 'trap "kill -SIGTERM $XVFB_PID" SIGINT SIGTERM' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
     echo 'wait $XVFB_PID' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
- 
     echo "=== [K8s Patch 6] 컴포넌트 하드코딩 도메인(cpp-) -> K8s 주소(epp-) 일괄 치환 ==="
     sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/conf/mongos.conf 2>/dev/null || true
     find /nfs/opt/ahnlab/cpp/setting/ /nfs/permanent/ -type f \( -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.xml" -o -name "*.cfg" -o -name "*.conf" \) -exec sed -i 's/cpp-postgres/epp-postgres/g; s/cpp-pgbouncer/epp-pgbouncer/g; s/cpp-redis/epp-redis/g; s/cpp-kafka/epp-kafka/g' {} + 2>/dev/null || true
@@ -115,8 +114,14 @@ data:
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
-    chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/database /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
-    chmod -R 700 /nfs/database /nfs/nosql 2>/dev/null || true
+    chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
+    echo "=== [K8s Patch 10] NoSQL Permissions & Missing Dirs (Sync with Legacy) ==="
+    chmod 755 /nfs/nosql 2>/dev/null || true
+    chmod 755 /nfs/nosql/cmd /nfs/nosql/data /nfs/nosql/logs /nfs/nosql/run 2>/dev/null || true
+    chmod 750 /nfs/nosql/conf 2>/dev/null || true
+    mkdir -p /nfs/nosql/fail_dir /nfs/nosql/save
+    chown -R 2500:2500 /nfs/nosql/fail_dir /nfs/nosql/save 2>/dev/null || true
+    chmod 755 /nfs/nosql/fail_dir /nfs/nosql/save 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
     echo "=== [K8s Patch 8] 리소스 권한 부여 ==="
@@ -128,4 +133,7 @@ data:
     chmod 700 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
     chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
     chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
+    echo "=== [K8s Patch 9] Postgres DB 폴더 권한 예외 처리 (UID 26) ==="
+    chown -R 26:26 /nfs/database 2>/dev/null || true
+    chown -R 26:26 /nfs/var/run/postgresql 2>/dev/null || true
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="

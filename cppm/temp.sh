@@ -1,24 +1,141 @@
-cat << 'EOF' > templates/pv.yaml
+cat << 'EOF' > /home/registry/my-service-manifests/cppm/templates/nfs-init/configmap-file.yaml
 apiVersion: v1
-kind: PersistentVolume
+kind: ConfigMap
 metadata:
-  name: k8s-cppm-pv
+  name: nfs-init-file-cm
+  namespace: {{ .Release.Namespace }}
   annotations:
-    helm.sh/hook: pre-install
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/sync-wave: "-5"
-spec:
-  capacity:
-    storage: 100Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: nfs-client
-  hostPath:
-    path: /data/cppm-nfs
+    helm.sh/hook: pre-install,pre-upgrade
+data:
+  init.sh: |-
+    #!/bin/bash
+    bash /init/01-extract.sh
+    bash /init/02-setup.sh
+    bash /init/03-perm.sh
+  01-extract.sh: |-
+    #!/bin/bash
+    echo "=== 1. Force Cleaning Kubelet Ghost Directories ==="
+    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/opt/ahnlab/cpp/cmd /nfs/opt/ahnlab/cpp/bin /nfs/opt/ahnlab/cpp/setting; do
+      if [ -d "$BAD_DIR" ] && [ -z "$(ls -A $BAD_DIR 2>/dev/null)" ]; then rm -rf "$BAD_DIR"; fi
+    done
+    echo "=== 2. Extracting Everything from /tools/cpp_setup.tar ==="
+    if [ -f "/nfs/permanent/etc/config/cpp_opensearch.properties" ] && [ -f "/nfs/permanent/etc/config/site.key" ]; then
+      echo "[SKIP] Original AhnLab files are already extracted."
+      exit 0
+    fi
+    if [ -f "/tools/cpp_setup.tar" ]; then
+      mkdir -p /tmp/setup_extract
+      tar -xf /tools/cpp_setup.tar -C /tmp/setup_extract/
+      INSTALL_DIR=$(find /tmp/setup_extract -type d -name "install" | head -n 1)
+      if [ -n "$INSTALL_DIR" ]; then
+        mkdir -p /nfs/opt/ahnlab/cpp
+        cp -a "$INSTALL_DIR"/bin "$INSTALL_DIR"/cmd "$INSTALL_DIR"/setting "$INSTALL_DIR"/version.ini /nfs/opt/ahnlab/cpp/ 2>/dev/null || true
+        cp -a "$INSTALL_DIR" /nfs/opt/ahnlab/ 2>/dev/null || true
+      fi
+      AHNFS_TAR=$(find /tmp/setup_extract -name "ahnfs.tar.gz" | head -n 1)
+      if [ -n "$AHNFS_TAR" ]; then
+        mkdir -p /tmp/ahnfs_ext && tar -zxf "$AHNFS_TAR" -C /tmp/ahnfs_ext/
+        PERM_DIR=$(find /tmp/ahnfs_ext -type d -name "permanent" | head -n 1)
+        if [ -n "$PERM_DIR" ]; then cp -a $(dirname "$PERM_DIR")/* /nfs/; fi
+      fi
+      rm -rf /tmp/setup_extract /tmp/ahnfs_ext
+    else
+      echo "[ERROR] /tools/cpp_setup.tar not found!"
+      exit 1
+    fi
+  02-setup.sh: |-
+    #!/bin/bash
+    echo "=== 3. Setting up Configs & Mock Docker ==="
+    mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
+    for file in /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/crontab /nfs/permanent/clair/sql/clair2x-vuln-db.sql /nfs/permanent/clair/config/config.yaml; do
+      if [ ! -f "$file" ]; then touch "$file"; fi
+    done
+    LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
+    if [ ! -f "$LOG_XML" ]; then
+      echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
+    fi
+    rm -rf /nfs/opt/ahnlab/cpp/log
+    mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
+    echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
+    rm -rf /nfs/ahnfs /opt/ahnfs
+    ln -snf /nfs /nfs/ahnfs
+    mkdir -p /opt && ln -snf /nfs /opt/ahnfs
+    echo '#!/bin/bash' > /usr/bin/docker
+    echo 'exit 0' >> /usr/bin/docker
+    chmod +x /usr/bin/docker
+    cp /usr/bin/docker /bin/docker
+    cp /usr/bin/docker /usr/local/bin/docker
+    CERT_SCRIPT="/nfs/opt/ahnlab/install/postinstall/010_host_certificate_update.sh"
+    if [ -f "$CERT_SCRIPT" ]; then
+      export storage_dir=/nfs
+      chmod +x "$CERT_SCRIPT"
+      bash "$CERT_SCRIPT" install || true
+    fi
+    rm -f /nfs/ahnfs /opt/ahnfs
+    echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
+    echo "storage=" > /nfs/.epp_storage_path
+    echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 오타 및 포트 충돌 교정 ==="
+    cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
+    sed -i 's/shardsvr/shardsvr2/g; s/clusterRole: shardsvr2/clusterRole: shardsvr/g; s/replSetName: SHARD1/replSetName: SHARD2/g; s/port: 8824/port: 8826/g' /nfs/nosql/conf/shardsvr2.conf
+    cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr3.conf 2>/dev/null || true
+    sed -i 's/shardsvr/shardsvr3/g; s/clusterRole: shardsvr3/clusterRole: shardsvr/g; s/replSetName: SHARD1/replSetName: SHARD3/g; s/port: 8824/port: 8827/g' /nfs/nosql/conf/shardsvr3.conf
+    if [ -f "/nfs/nosql/cmd/epp-mongo-shardsvr.sh" ]; then
+      cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
+      sed -i 's/shardsvr/shardsvr2/g' /nfs/nosql/cmd/epp-mongo-shardsvr2.sh
+      cp /nfs/nosql/cmd/epp-mongo-shardsvr.sh /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
+      sed -i 's/shardsvr/shardsvr3/g' /nfs/nosql/cmd/epp-mongo-shardsvr3.sh
+    fi
+    echo "=== [K8s Patch 3] Postgres 초기화 무적(Trust) 모드 및 네트워크 오픈 ==="
+    PG_HBA=$(find /nfs/permanent -name "pg_hba.conf" 2>/dev/null | head -n 1)
+    if [ -n "$PG_HBA" ]; then
+      sed -i 's/md5/trust/g' "$PG_HBA"
+      sed -i 's/scram-sha-256/trust/g' "$PG_HBA"
+      if ! grep -q "0.0.0.0/0.*trust" "$PG_HBA"; then
+        echo "hostnossl all all 0.0.0.0/0 trust" >> "$PG_HBA"
+        echo "host all all 0.0.0.0/0 trust" >> "$PG_HBA"
+      fi
+    fi
+    echo "=== [K8s Patch 4] Mongo Shard 데이터 디렉터리 완벽 초기화 ==="
+    rm -rf /nfs/nosql/data/shardsvr/*
+    mkdir -p /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3
+    echo "=== [K8s Patch 5] X-Server 기동 스크립트 생성 ==="
+    mkdir -p /nfs/opt/ahnlab/cpp/cmd
+    echo '#!/bin/bash' > /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'export DISPLAY=:99' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'Xvfb :99 -ac -screen 0 1280x1024x24 -nolisten tcp &' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'XVFB_PID=$!' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'trap "kill -SIGTERM $XVFB_PID" SIGINT SIGTERM' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo 'wait $XVFB_PID' >> /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh
+    echo "=== [K8s Patch 6] 컴포넌트 하드코딩 도메인(cpp-) -> K8s 주소(epp-) 일괄 치환 ==="
+    sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/conf/mongos.conf 2>/dev/null || true
+    find /nfs/opt/ahnlab/cpp/setting/ /nfs/permanent/ -type f \( -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.xml" -o -name "*.cfg" -o -name "*.conf" \) -exec sed -i 's/cpp-postgres/epp-postgres/g; s/cpp-pgbouncer/epp-pgbouncer/g; s/cpp-redis/epp-redis/g; s/cpp-kafka/epp-kafka/g' {} + 2>/dev/null || true
+    echo "=== [K8s Patch 7] PgBouncer 초기화 무적(Trust) 모드 패치 ==="
+    find /nfs/permanent/service/pgbouncer/conf/ -name "*.cfg" -exec sed -i 's/auth_type = scram-sha-256/auth_type = trust/g; s/auth_type = md5/auth_type = trust/g' {} + 2>/dev/null || true
+  03-perm.sh: |-
+    #!/bin/bash
+    echo "=== 5. Enforcing Strict Permissions ==="
+    chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
+    echo "=== [K8s Patch 10] NoSQL Permissions & Missing Dirs (Sync with Legacy) ==="
+    chmod 755 /nfs/nosql 2>/dev/null || true
+    chmod 755 /nfs/nosql/cmd /nfs/nosql/data /nfs/nosql/logs /nfs/nosql/run 2>/dev/null || true
+    chmod 750 /nfs/nosql/conf 2>/dev/null || true
+    mkdir -p /nfs/nosql/fail_dir /nfs/nosql/save
+    chown -R 2500:2500 /nfs/nosql/fail_dir /nfs/nosql/save 2>/dev/null || true
+    chmod 755 /nfs/nosql/fail_dir /nfs/nosql/save 2>/dev/null || true
+    if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
+    chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
+    echo "=== [K8s Patch 8] 리소스 권한 부여 ==="
+    chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
+    chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
+    chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
+    chmod 700 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
+    chown -R 2500:2500 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
+    chmod 700 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
+    chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
+    chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
+    echo "=== [K8s Patch 9] Postgres DB 폴더 권한 예외 처리 (UID 26) ==="
+    chown -R 26:26 /nfs/database 2>/dev/null || true
+    chown -R 26:26 /nfs/var/run/postgresql 2>/dev/null || true
+    echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="
 EOF
- 
-git add templates/pv.yaml
-git commit -m "fix: add PreSync hook to pv.yaml to prevent sync deadlock"
-git push origin main

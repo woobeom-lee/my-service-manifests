@@ -65,7 +65,7 @@ spec:
                 cp "$CONF_FILE" /opt/ahnlab/cpp/service/redis/conf/redis.conf
               fi
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock

@@ -46,8 +46,8 @@ spec:
             - "-c"
             - |
               # 🔥 핵심 1: 충돌(Crash)을 일으키는 과거 찌꺼기 소켓 파일 무조건 삭제
-              find /permanent /tmp /database -name ".s.PGSQL.8819*" -delete 2>/dev/null || true
-              find /permanent /tmp /database -name ".s.PGSQL.8817*" -delete 2>/dev/null || true
+              find /permanent /tmp -name ".s.PGSQL.8819*" -delete 2>/dev/null || true
+              find /permanent /tmp -name ".s.PGSQL.8817*" -delete 2>/dev/null || true
               # 안랩 순정 설정 스크립트 실행
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
               # 🔥 핵심 2: PgBouncer 외부 접속(0.0.0.0) 허용 설정 주입
@@ -56,7 +56,7 @@ spec:
                 sed -i 's/^listen_addr.*/listen_addr = 0.0.0.0/g' "$CONF_FILE"
               fi
               # 권한 복구 및 도커 소켓 권한 허용
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock

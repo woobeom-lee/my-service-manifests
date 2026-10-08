@@ -1,0 +1,12 @@
+echo "=== 1. Reverting All Changes to Golden State ==="
+cd /home/registry/my-service-manifests
+# 직전 상태로 코드를 완전히 롤백 (로컬)
+git reset --hard HEAD~1
+# 롤백된 상태를 원격 Git 저장소에 강제 덮어쓰기 (branch 이름이 main이 아니라면 수정해주세요)
+git push -f origin main
+ 
+echo "=== 2. Cleaning Data and Resources ==="
+# 꼬여버린 데이터와 K8s 리소스 완벽 초기화
+rm -rf /data/ahnfs/*
+kubectl delete deploy,sts,jobs --all -n k8s-cppm
+echo "Rollback complete. Please run Sync in ArgoCD."

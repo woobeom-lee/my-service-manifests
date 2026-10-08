@@ -1,4 +1,10 @@
 # 0. nfs-init Job 자체에 걸려있는 K8s의 '종료 락(Finalizer)' 강제 제거
+kubectl get pod -n k8s-cppm --no-headers \
+| grep epp-rsyslog \
+| grep Terminating \
+| awk '{print $1}' \
+| xargs -r kubectl delete pod -n k8s-cppm --force --grace-period=0
+
 kubectl patch job nfs-init -n k8s-cppm -p '{"metadata":{"finalizers":null}}' --type=merge
 kubectl patch job db-init -n k8s-cppm -p '{"metadata":{"finalizers":null}}' --type=merge
 kubectl delete job nfs-init -n k8s-cppm

@@ -35,10 +35,10 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              mkdir -p /database/15/cppoltpdata
-              chown -R 2500:2500 /database
-              chown -R 2500:2500 /var/run/postgresql
-              chmod 700 /database/15/cppoltpdata
+              mkdir -p/15/cppoltpdata
+              chown -R 26:26
+              chown -R 26:26
+              chmod 700/15/cppoltpdata
       containers:
         - name: postgres
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -46,7 +46,7 @@ spec:
           command: ["/bin/bash", "/database/cmd/epp-postgres-eppoltp.sh"]
           securityContext:
             privileged: true
-            runAsUser: 2500
+            runAsUser: 26
           ports:
             - containerPort: 8817
           env:
@@ -64,7 +64,7 @@ spec:
                     (
                       # 1. 방화벽 강제 개방 로직 (우리가 추가한 핵심 해결책)
                       for i in {1..30}; do
-                        HBA_FILE=$(find /database -name "pg_hba.conf" 2>/dev/null | grep -E "postgres|eppoltp" | head -n 1)
+                        HBA_FILE=$(find -name "pg_hba.conf" 2>/dev/null | grep -E "postgres|eppoltp" | head -n 1)
                         if [ -n "$HBA_FILE" ]; then
                           if ! grep -q "0.0.0.0/0.*trust" "$HBA_FILE"; then
                             echo "host    all             all             0.0.0.0/0               trust" >> "$HBA_FILE"
@@ -88,9 +88,9 @@ spec:
                     ) &
           volumeMounts:
             - name: vol-database
-              mountPath: /database
+              mountPath:
             - name: vol-var-postgres
-              mountPath: /var/run/postgresql
+              mountPath:
       volumes:
         - name: vol-database
           hostPath:

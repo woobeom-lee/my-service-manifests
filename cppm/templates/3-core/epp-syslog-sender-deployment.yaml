@@ -62,7 +62,7 @@ spec:
               mountPath: /nosql
               subPath: nosql
             - name: vol-ahnfs-root
-              mountPath: /database
+              mountPath:
               subPath: database
             # [원상 복구] 정상적인 호스트 공유 볼륨 사용
             - name: vol-ahnfs-root
@@ -99,7 +99,7 @@ spec:
               mountPath: /var/log
               subPath: var/log
             - name: vol-ahnfs-root
-              mountPath: /var/run/postgresql
+              mountPath:
               subPath: var/run/postgresql
             - name: vol-ahnfs-root
               mountPath: /opt/repo
