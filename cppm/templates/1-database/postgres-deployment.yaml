@@ -37,6 +37,14 @@ spec:
             - |
               mkdir -p /database/15/cppoltpdata
               chmod 700 /database/15/cppoltpdata
+              # DB 설정 파일이 증발했을 경우 자동 복구 (initdb)
+              if [ ! -f /database/15/cppoltpdata/postgresql.conf ]; then
+                echo "DB files are missing. Running initdb..."
+                /usr/pgsql-15/bin/initdb -D /database/15/cppoltpdata
+                echo "listen_addresses = '*'" >> /database/15/cppoltpdata/postgresql.conf
+                echo "port = 8817" >> /database/15/cppoltpdata/postgresql.conf
+                echo "host all all 0.0.0.0/0 trust" >> /database/15/cppoltpdata/pg_hba.conf
+              fi
               chmod -R 755 /database/cmd || true
           volumeMounts:
             - name: vol-database
