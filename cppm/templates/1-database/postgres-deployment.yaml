@@ -25,61 +25,27 @@ spec:
         - operator: "Exists"
           effect: "NoSchedule"
       initContainers:
-        # [단계 1] NFS 강제 UID(2500) 권한을 이용해 하위 폴더까지 모든 문을 개방(-R)
-        - name: open-permissions
-          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            runAsUser: 0
-            privileged: true
-          command:
-            - "/bin/bash"
-            - "-c"
-            - |
-              # 이번엔 -R 옵션으로 가장 깊은 DB 파일까지 모두 엽니다!
-              chmod -R 777 /database || true
-              chmod -R 777 /var/run/postgresql || true
-          volumeMounts:
-            - name: vol-database
-              mountPath: /database
-            - name: vol-var-postgres
-              mountPath: /var/run/postgresql
- 
-        # [단계 2] Postgres(26) 계정으로 진입하여 파일을 복제, 26:26 소유권 창조!
         - name: init-postgres-data
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
           securityContext:
-            runAsUser: 26  # 반드시 26번으로 실행!
+            runAsUser: 26  # <== cpp-cli 필수 종속성 완벽 준수
             privileged: true
           command:
             - "/bin/bash"
             - "-c"
             - |
-              # 1. 2500번 껍데기를 26번으로 완벽하게 탈바꿈시키는 복제 로직
-              if [ -d "/database/15/cppoltpdata" ]; then
-                OWNER=$(stat -c '%u' /database/15/cppoltpdata 2>/dev/null)
-                if [ "$OWNER" != "26" ]; then
-                  echo "Found UID $OWNER. Cloning data to force UID 26..."
-                  cd /database
-                  cp -R 15 15_postgres
-                  rm -rf 15
-                  mv 15_postgres 15
-                fi
-              else
-                mkdir -p /database/15/cppoltpdata
-              fi
-              # 2. 파일 증발 시 자동 복구 로직 (보험)
+              # K8s 안에서 26번 계정으로 직접 폴더를 창조 (NFS 방어 우회)
+              mkdir -p /database/15/cppoltpdata
+              chmod 700 /database/15/cppoltpdata
+              # 깨끗하게 initdb 수행
               if [ ! -f /database/15/cppoltpdata/postgresql.conf ]; then
+                echo "Running initdb as UID 26..."
                 /usr/pgsql-15/bin/initdb -D /database/15/cppoltpdata
                 echo "listen_addresses = '*'" >> /database/15/cppoltpdata/postgresql.conf
                 echo "port = 8817" >> /database/15/cppoltpdata/postgresql.conf
                 echo "host all all 0.0.0.0/0 trust" >> /database/15/cppoltpdata/pg_hba.conf
               fi
-              # 3. Postgres 보안 규정 준수 (700) 및 잔여 락 파일 청소
-              chmod 700 /database/15/cppoltpdata
-              chmod -R 755 /database/cmd || true
-              rm -f /var/run/postgresql/.s.PGSQL* || true
           volumeMounts:
             - name: vol-database
               mountPath: /database
@@ -108,7 +74,6 @@ spec:
                   - "-c"
                   - |
                     (
-                      # 1. 방화벽 강제 개방 로직
                       for i in {1..30}; do
                         HBA_FILE=$(find /database -name "pg_hba.conf" 2>/dev/null | grep -E "postgres|eppoltp" | head -n 1)
                         if [ -n "$HBA_FILE" ]; then
@@ -120,10 +85,8 @@ spec:
                         fi
                         sleep 2
                       done
-                      # 2. 안랩 원본 라이선스 패치 로직
                       for i in {1..30}; do
                         if psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
-                          echo "Database is ready. Executing license bypass queries..."
                           psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
                           psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
                           break
