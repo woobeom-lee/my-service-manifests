@@ -29,16 +29,14 @@ spec:
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
           securityContext:
-            runAsUser: 26  # <== cpp-cli 필수 종속성 완벽 준수
+            runAsUser: 26
             privileged: true
           command:
             - "/bin/bash"
             - "-c"
             - |
-              # K8s 안에서 26번 계정으로 직접 폴더를 창조 (NFS 방어 우회)
               mkdir -p /database/15/cppoltpdata
               chmod 700 /database/15/cppoltpdata
-              # 깨끗하게 initdb 수행
               if [ ! -f /database/15/cppoltpdata/postgresql.conf ]; then
                 echo "Running initdb as UID 26..."
                 /usr/pgsql-15/bin/initdb -D /database/15/cppoltpdata
@@ -46,6 +44,7 @@ spec:
                 echo "port = 8817" >> /database/15/cppoltpdata/postgresql.conf
                 echo "host all all 0.0.0.0/0 trust" >> /database/15/cppoltpdata/pg_hba.conf
               fi
+              rm -f /var/run/postgresql/.s.PGSQL* || true
           volumeMounts:
             - name: vol-database
               mountPath: /database
