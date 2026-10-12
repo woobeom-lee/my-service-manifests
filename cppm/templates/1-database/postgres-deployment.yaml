@@ -36,11 +36,15 @@ spec:
             - "-c"
             - |
               mkdir -p /database/15/cppoltpdata
-                chown -R 26:26 /database
-                chmod -R 700 /database/cmd
-                chmod -R 700 /database/cmd
-                chown -R 26:26 /var/run/postgresql
+              chown -R 26:26 /database
+              chown -R 26:26 /var/run/postgresql
               chmod 700 /database/15/cppoltpdata
+              chmod -R 700 /database/cmd || true
+          volumeMounts:
+            - name: vol-database
+              mountPath: /database
+            - name: vol-var-postgres
+              mountPath: /var/run/postgresql
       containers:
         - name: postgres
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
@@ -48,7 +52,7 @@ spec:
           command: ["/bin/bash", "/database/cmd/epp-postgres-eppoltp.sh"]
           securityContext:
             privileged: true
-            runAsUser: 26 
+            runAsUser: 26
           ports:
             - containerPort: 8817
           env:
@@ -64,7 +68,7 @@ spec:
                   - "-c"
                   - |
                     (
-                      # 1. 방화벽 강제 개방 로직 (우리가 추가한 핵심 해결책)
+                      # 1. 방화벽 강제 개방 로직
                       for i in {1..30}; do
                         HBA_FILE=$(find /database -name "pg_hba.conf" 2>/dev/null | grep -E "postgres|eppoltp" | head -n 1)
                         if [ -n "$HBA_FILE" ]; then
@@ -76,8 +80,7 @@ spec:
                         fi
                         sleep 2
                       done
- 
-                      # 2. 안랩 원본 라이선스 패치 로직 (보존됨)
+                      # 2. 안랩 원본 라이선스 패치 로직
                       for i in {1..30}; do
                         if psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
                           echo "Database is ready. Executing license bypass queries..."
