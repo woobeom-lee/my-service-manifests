@@ -39,7 +39,7 @@ spec:
               chown -R 26:26 /database
               chown -R 26:26 /var/run/postgresql
               chmod 700 /database/15/cppoltpdata
-              chmod -R 700 /database/cmd || true
+              chmod -R 755 /database/cmd || true
           volumeMounts:
             - name: vol-database
               mountPath: /database
