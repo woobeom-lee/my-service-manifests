@@ -25,8 +25,7 @@ spec:
         - operator: "Exists"
           effect: "NoSchedule"
       initContainers:
-        # [단계 1] 문 열기: root(0)로 실행되지만 NFS에서는 2500으로 취급됨.
-        # 2500번이 소유자이므로 chmod 777로 문을 열 수 있음.
+        # [단계 1] NFS 강제 UID(2500) 권한을 이용해 하위 폴더까지 모든 문을 개방(-R)
         - name: open-permissions
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
@@ -37,38 +36,50 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              chmod 777 /database
-              chmod 777 /var/run/postgresql
+              # 이번엔 -R 옵션으로 가장 깊은 DB 파일까지 모두 엽니다!
+              chmod -R 777 /database || true
+              chmod -R 777 /var/run/postgresql || true
           volumeMounts:
             - name: vol-database
               mountPath: /database
             - name: vol-var-postgres
               mountPath: /var/run/postgresql
  
-        # [단계 2] 집 짓기: 실제 26번(postgres)으로 실행.
-        # 문이 열려있으므로 방해 없이 자신의 폴더를 26:26으로 구축함.
+        # [단계 2] Postgres(26) 계정으로 진입하여 파일을 복제, 26:26 소유권 창조!
         - name: init-postgres-data
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
           securityContext:
-            runAsUser: 26
+            runAsUser: 26  # 반드시 26번으로 실행!
             privileged: true
           command:
             - "/bin/bash"
             - "-c"
             - |
-              # 26번으로 생성되므로 NFS 방어를 뚫고 완벽히 26:26으로 저장됨
-              mkdir -p /database/15/cppoltpdata
-              chmod 700 /database/15/cppoltpdata
-              chmod -R 755 /database/cmd || true
-              # DB 파일 증발 시 자동 복구(initdb)도 26번 권한으로 완벽하게 수행
+              # 1. 2500번 껍데기를 26번으로 완벽하게 탈바꿈시키는 복제 로직
+              if [ -d "/database/15/cppoltpdata" ]; then
+                OWNER=$(stat -c '%u' /database/15/cppoltpdata 2>/dev/null)
+                if [ "$OWNER" != "26" ]; then
+                  echo "Found UID $OWNER. Cloning data to force UID 26..."
+                  cd /database
+                  cp -R 15 15_postgres
+                  rm -rf 15
+                  mv 15_postgres 15
+                fi
+              else
+                mkdir -p /database/15/cppoltpdata
+              fi
+              # 2. 파일 증발 시 자동 복구 로직 (보험)
               if [ ! -f /database/15/cppoltpdata/postgresql.conf ]; then
-                echo "DB files are missing. Running initdb as UID 26..."
                 /usr/pgsql-15/bin/initdb -D /database/15/cppoltpdata
                 echo "listen_addresses = '*'" >> /database/15/cppoltpdata/postgresql.conf
                 echo "port = 8817" >> /database/15/cppoltpdata/postgresql.conf
                 echo "host all all 0.0.0.0/0 trust" >> /database/15/cppoltpdata/pg_hba.conf
               fi
+              # 3. Postgres 보안 규정 준수 (700) 및 잔여 락 파일 청소
+              chmod 700 /database/15/cppoltpdata
+              chmod -R 755 /database/cmd || true
+              rm -f /var/run/postgresql/.s.PGSQL* || true
           volumeMounts:
             - name: vol-database
               mountPath: /database
