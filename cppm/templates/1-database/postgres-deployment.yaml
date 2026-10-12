@@ -29,15 +29,13 @@ spec:
           image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
           imagePullPolicy: IfNotPresent
           securityContext:
-            runAsUser: 0
+            runAsUser: 26
             privileged: true
           command:
             - "/bin/bash"
             - "-c"
             - |
               mkdir -p /database/15/cppoltpdata
-              chown -R 26:26 /database
-              chown -R 26:26 /var/run/postgresql
               chmod 700 /database/15/cppoltpdata
               chmod -R 755 /database/cmd || true
           volumeMounts:
