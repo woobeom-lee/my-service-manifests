@@ -115,7 +115,7 @@ data:
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
     chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
-    echo "=== [K8s Patch 10] NoSQL Permissions & Missing Dirs (Sync with Legacy) ==="
+    echo "=== [K8s Patch 10] NoSQL Permissions & Missing Dirs (Sync 유실 방지) ==="
     chmod 755 /nfs/nosql 2>/dev/null || true
     chmod 755 /nfs/nosql/cmd /nfs/nosql/data /nfs/nosql/logs /nfs/nosql/run 2>/dev/null || true
     chmod 750 /nfs/nosql/conf 2>/dev/null || true
@@ -134,6 +134,12 @@ data:
     chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
     chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
     echo "=== [K8s Patch 9] Postgres DB 폴더 권한 예외 처리 (UID 26) ==="
+    # 1. 26번 소유권 일괄 적용
+    mkdir -p /nfs/database/15/cppoltpdata 2>/dev/null || true
     chown -R 26:26 /nfs/database 2>/dev/null || true
     chown -R 26:26 /nfs/var/run/postgresql 2>/dev/null || true
+    # 2. cmd 스크립트 실행 권한 부여 (755)
+    chmod -R 755 /nfs/database/cmd 2>/dev/null || true
+    # 3. 핵심 DB 데이터 폴더 접근 권한 부여 (700)
+    chmod 700 /nfs/database/15/cppoltpdata 2>/dev/null || true
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="
