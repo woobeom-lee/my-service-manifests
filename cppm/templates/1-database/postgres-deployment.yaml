@@ -36,6 +36,9 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              if [ ! -f /database/cmd/epp-postgres-eppoltp.sh ]; then
+                bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              fi
               mkdir -p /database/15/cppoltpdata /var/run/postgresql
               chown -R 26:26 /database /var/run/postgresql
               chmod 700 /database/15/cppoltpdata
@@ -47,14 +50,13 @@ spec:
               fi
  
               if [ -f /database/15/cppoltpdata/pg_hba.conf ]; then
-                sed -i 's/\(scram-sha-256\|md5\|ident\|peer\)/trust/g' /database/15/cppoltpdata/pg_hba.conf
+                sed -i '/EOF/d' /database/15/cppoltpdata/pg_hba.conf
                 if ! grep -q "0.0.0.0/0.*trust" /database/15/cppoltpdata/pg_hba.conf; then
-                  cat << 'EOF' >> /database/15/cppoltpdata/pg_hba.conf
-              host    all             all             127.0.0.1/32            trust
-              host    all             all             {{ .Values.global.masterIp }}/32         trust
-              host    all             all             10.244.0.0/16           trust
-              host    all             all             0.0.0.0/0               trust
-              EOF
+                  echo "" >> /database/15/cppoltpdata/pg_hba.conf
+                  echo "host all all 127.0.0.1/32 trust" >> /database/15/cppoltpdata/pg_hba.conf
+                  echo "host all all {{ .Values.global.masterIp }}/32 trust" >> /database/15/cppoltpdata/pg_hba.conf
+                  echo "host all all 10.244.0.0/16 trust" >> /database/15/cppoltpdata/pg_hba.conf
+                  echo "host all all 0.0.0.0/0 trust" >> /database/15/cppoltpdata/pg_hba.conf
                 fi
               fi
  
@@ -88,22 +90,18 @@ spec:
                   - "/bin/bash"
                   - "-c"
                   - |
-                    (
+                    nohup bash -c '
                       for i in {1..30}; do
                         if psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';" 2>/dev/null || true
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';" 2>/dev/null || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "ALTER USER eppoltpuser WITH SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || \
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "CREATE ROLE eppoltpuser WITH LOGIN SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = '\''FINISH'\'' WHERE expire_update_status = '\''UPDATING'\'';" > /dev/null 2>&1 || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = '\''FINISH'\'' WHERE expire_update_status = '\''UPDATING'\'';" > /dev/null 2>&1 || true
                           break
                         fi
                         sleep 2
                       done
-                      # cppm-setup init 이 eppoltpuser 를 삭제하더라도 즉시 복구하여 PgBouncer 연결 끊김 방지
-                      while true; do
-                        psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='eppoltpuser'" | grep -q 1 || \
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "CREATE ROLE eppoltpuser WITH LOGIN SUPERUSER PASSWORD 'qweQWE123!@#'; GRANT ALL PRIVILEGES ON DATABASE cppoltp TO eppoltpuser;" 2>/dev/null || true
-                        sleep 3
-                      done
-                    ) &
+                    ' >/dev/null 2>&1 &
           volumeMounts:
             - name: vol-database
               mountPath: /database
