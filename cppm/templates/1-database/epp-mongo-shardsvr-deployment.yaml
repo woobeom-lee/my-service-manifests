@@ -62,7 +62,7 @@ spec:
               if [ -f /nosql/conf/mongo_key ]; then
                 chmod 600 /nosql/conf/mongo_key
               fi
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql  /tmp /var/log /home /opt/repo /new  || true
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock

@@ -56,7 +56,7 @@ spec:
                 sed -i 's/^listen_addr.*/listen_addr = 0.0.0.0/g' "$CONF_FILE"
               fi
               # 권한 복구 및 도커 소켓 권한 허용
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /database /tmp /var/log /home /opt/repo /new /var/run/postgresql || true
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql  /tmp /var/log /home /opt/repo /new  || true
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
