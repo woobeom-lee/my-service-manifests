@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: epp-mongo-hosts-init
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: update-etc-hosts
+          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          env:
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "Updating host /etc/hosts with Node IP: ${NODE_IP}..."
+              grep -vE "cpp-mongo-configsvr1|epp-mongo-configsvr1" /host-etc/hosts > /tmp/hosts.tmp
+              cat <<EOF >> /tmp/hosts.tmp
+              ${NODE_IP} cpp-mongo-configsvr1 cpp-mongo-configsvr2 cpp-mongo-configsvr3 cpp-mongo-shardsvr cpp-mongo-shardsvr2 cpp-mongo-shardsvr3 cpp-mongo-mongos
+              ${NODE_IP} epp-mongo-configsvr1 epp-mongo-configsvr2 epp-mongo-configsvr3 epp-mongo-shardsvr epp-mongo-shardsvr2 epp-mongo-shardsvr3 epp-mongo-mongos
+              EOF
+              cat /tmp/hosts.tmp > /host-etc/hosts
+              rm -f /tmp/hosts.tmp
+              echo "Successfully updated /etc/hosts!"
+          volumeMounts:
+            - name: host-etc-hosts
+              mountPath: /host-etc/hosts
+      volumes:
+        - name: host-etc-hosts
+          hostPath:
+            path: /etc/hosts
+            type: File
