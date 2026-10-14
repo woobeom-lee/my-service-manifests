@@ -33,15 +33,14 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "Updating host /etc/hosts with Node IP: ${NODE_IP}..."
-              grep -vE "cpp-mongo-configsvr1|epp-mongo-configsvr1" /host-etc/hosts > /tmp/hosts.tmp
+              grep -vE "cpp-mongo-configsvr1|epp-mongo-configsvr1|cpp-postgres-eppoltp" /host-etc/hosts > /tmp/hosts.tmp
               cat <<EOF >> /tmp/hosts.tmp
               ${NODE_IP} cpp-mongo-configsvr1 cpp-mongo-configsvr2 cpp-mongo-configsvr3 cpp-mongo-shardsvr cpp-mongo-shardsvr2 cpp-mongo-shardsvr3 cpp-mongo-mongos
               ${NODE_IP} epp-mongo-configsvr1 epp-mongo-configsvr2 epp-mongo-configsvr3 epp-mongo-shardsvr epp-mongo-shardsvr2 epp-mongo-shardsvr3 epp-mongo-mongos
+              ${NODE_IP} cpp-postgres-eppoltp epp-postgres-eppoltp cpp-pgbouncer-eppoltp epp-pgbouncer-eppoltp cpp-redis epp-redis epp-mgr cpp-server cpp-eureka-server cpp-eureka-gateway cpp-lbagent
               EOF
               cat /tmp/hosts.tmp > /host-etc/hosts
               rm -f /tmp/hosts.tmp
-              echo "Successfully updated /etc/hosts!"
           volumeMounts:
             - name: host-etc-hosts
               mountPath: /host-etc/hosts
