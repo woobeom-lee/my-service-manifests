@@ -15,4 +15,4 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: nfs-client
   hostPath:
-    path: /data/cppm-nfs
+    path: {{ .Values.global.hostPathBase }}

@@ -29,8 +29,16 @@ kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -
 kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp < "$SCHEMA_DIR/update_99999_cppoltp_function.sql"
  
 echo "=== [5/5] 라이선스 패치 및 애플리케이션 파드 재시작 ==="
-kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
-kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'FINISH' WHERE expire_update_status = 'UPDATING';"
+kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'DONE' WHERE expire_update_status = 'UPDATING';"
+kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'DONE' WHERE expire_update_status = 'UPDATING';"
  
 echo "✅ 모든 복원 완료! 죽어있는 앱 파드들을 깨웁니다."
 kubectl delete pods -l 'app in (epp-tomcat-auth, epp-tomcat-agent, tomcat-console, epp-batch-processor, epp-scheduler, epp-syslog-sender)' -n k8s-cppm
+#chown -R 26:26 /data/ahnfs/database
+#chown -R 26:26 /data/ahnfs/var/run/postgresql
+
+
+#chmod -R 777 /data/ahnfs/var/run/postgresql
+#chmod -R 777 /data/ahnfs/database/cmd
+#chmod -R 777 /data/ahnfs/database/15
+#kubectl delete pod -l app=epp-postgres-eppoltp -n k8s-cppm --force --grace-period=0

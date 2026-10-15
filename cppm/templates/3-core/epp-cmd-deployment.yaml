@@ -50,7 +50,7 @@ spec:
             - name: CONTAINER_NAME
               value: "cpp-cmd"
             - name: JAVA_TOOL_OPTIONS
-              value: "-Xms512m -Xmx1024m"
+              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true"
           volumeMounts:
             - name: tmpfs-ahnlab
               mountPath: /opt/ahnlab

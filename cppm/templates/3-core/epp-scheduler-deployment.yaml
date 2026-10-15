@@ -214,7 +214,7 @@ spec:
             type: File
         - name: epp-storage-path-vol
           hostPath:
-            path: /home/k8s/cpp_installer/epp_storage_path
+            path: {{ .Values.global.hostPathBase }}/.epp_storage_path
             type: FileOrCreate
  
 ---

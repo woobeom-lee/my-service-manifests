@@ -95,8 +95,8 @@ spec:
                         if psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
                           psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "ALTER USER eppoltpuser WITH SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || \
                           psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "CREATE ROLE eppoltpuser WITH LOGIN SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || true
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = '\''FINISH'\'' WHERE expire_update_status = '\''UPDATING'\'';" > /dev/null 2>&1 || true
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = '\''FINISH'\'' WHERE expire_update_status = '\''UPDATING'\'';" > /dev/null 2>&1 || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = '\''DONE'\'' WHERE expire_update_status = '\''UPDATING'\'';" > /dev/null 2>&1 || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = '\''DONE'\'' WHERE expire_update_status = '\''UPDATING'\'';" > /dev/null 2>&1 || true
                           break
                         fi
                         sleep 2

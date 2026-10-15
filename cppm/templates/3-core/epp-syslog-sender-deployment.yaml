@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: epp-syslog-sender
-  namespace: k8s-cppm
+  namespace: {{ .Release.Namespace }}
   labels:
     app: epp-syslog-sender
 spec:
@@ -48,7 +48,7 @@ spec:
             - name: CONTAINER_NAME
               value: "cpp-syslog-sender"
             - name: JAVA_TOOL_OPTIONS
-              value: "-Xms512m -Xmx1024m"
+              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true"
           volumeMounts:
             - name: tmpfs-ahnlab
               mountPath: /opt/ahnlab
@@ -66,7 +66,7 @@ spec:
               subPath: database
             # [원상 복구] 정상적인 호스트 공유 볼륨 사용
             - name: vol-ahnfs-root
-              mountPath: /tmp_host
+              mountPath: /tmp
               subPath: tmp
             - name: vol-ahnfs-root
               mountPath: /home
@@ -125,7 +125,7 @@ spec:
             sizeLimit: 16Mi
         - name: vol-ahnfs-root
           hostPath:
-            path: /data/ahnfs
+            path: {{ .Values.global.hostPathBase }}
             type: Directory
         - name: vol-host-log
           hostPath:

@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cpp-eureka-gateway
-  namespace: k8s-cppm
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: epp-eureka-gateway
@@ -16,7 +16,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cpp-lbagent
-  namespace: k8s-cppm
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: epp-eureka-gateway
@@ -29,7 +29,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: epp-eureka-gateway
-  namespace: k8s-cppm
+  namespace: {{ .Release.Namespace }}
   labels:
     app: epp-eureka-gateway
 spec:
@@ -70,13 +70,13 @@ spec:
       volumes:
         - name: vol-cpp
           hostPath:
-            path: /data/ahnfs/opt/ahnlab/cpp
+            path: {{ .Values.global.hostPathBase }}/opt/ahnlab/cpp
             type: DirectoryOrCreate
         - name: vol-permanent
           hostPath:
-            path: /data/ahnfs/permanent
+            path: {{ .Values.global.hostPathBase }}/permanent
             type: DirectoryOrCreate
         - name: vol-tmp
           hostPath:
-            path: /data/ahnfs/tmp
+            path: {{ .Values.global.hostPathBase }}/tmp
             type: DirectoryOrCreate

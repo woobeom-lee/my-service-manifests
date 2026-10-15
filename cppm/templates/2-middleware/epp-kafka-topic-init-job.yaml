@@ -17,8 +17,8 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "Waiting for Kafka broker (epp-kafka:9092) to be ready..."
-              until true || timeout 1 bash -c "</dev/tcp/epp-kafka/9092" 2>/dev/null; do
+              echo "Waiting for Kafka broker (epp-kafka:8816) to be ready..."
+              until true || timeout 1 bash -c "</dev/tcp/epp-kafka/8816" 2>/dev/null; do
                 echo "Kafka is not ready yet. Retrying in 5 seconds..."
                 sleep 5
               done
