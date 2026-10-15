@@ -45,7 +45,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        kubernetes.io/hostname: "cpp-server"
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       securityContext:
         runAsUser: 2500
       containers:

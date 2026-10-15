@@ -18,12 +18,12 @@ spec:
         app: epp-cluster-manager
     spec:
       nodeSelector:
-        kubernetes.io/hostname: "cpp-server"
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       hostAliases:
-        - ip: "10.128.88.28"
+        - ip: {{ .Values.global.masterIp | quote }}
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
@@ -97,27 +97,27 @@ spec:
         - name: vol-ahnfs-root
           hostPath:
             path: {{ .Values.global.hostPathBase }}
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-nosql
           hostPath:
             path: {{ .Values.global.hostPathBase }}/nosql
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-database
           hostPath:
             path: {{ .Values.global.hostPathBase }}/database
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-tmp
           hostPath:
             path: {{ .Values.global.hostPathBase }}/tmp
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-home
           hostPath:
             path: {{ .Values.global.hostPathBase }}/home
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-permanent
           hostPath:
             path: {{ .Values.global.hostPathBase }}/permanent
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-docker-sock
           hostPath:
             path: /var/run/docker.sock

@@ -21,7 +21,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-tomcat-console
       hostAliases:
-        - ip: "10.128.88.28"
+        - ip: {{ .Values.global.masterIp | quote }}
           hostnames:
             - "epp-postgres-eppoltp"
             - "epp-mgr"
@@ -29,7 +29,7 @@ spec:
             - "cpp-tomcat-console"
             - "host.docker.internal"
       nodeSelector:
-        kubernetes.io/hostname: "cpp-server"
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
@@ -46,6 +46,9 @@ spec:
             - |
               echo "Starting AhnLab setup..."
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
+              mkdir -p /permanent/log/console
+              rm -rf /opt/ahnlab/cpp/log
+              ln -snf /permanent/log /opt/ahnlab/cpp/log
               echo "Fixing permissions for ALL 22 mounted paths..."
               mkdir -p /opt/repo /new /permanent /nosql /database /tmp /var/log /home /var/run/postgresql
               chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true

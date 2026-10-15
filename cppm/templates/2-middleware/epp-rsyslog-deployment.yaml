@@ -21,12 +21,12 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-rsyslog
       nodeSelector:
-        kubernetes.io/hostname: "cpp-server"
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       hostAliases:
-        - ip: "10.128.88.28"
+        - ip: {{ .Values.global.masterIp | quote }}
           hostnames:
             - "host.docker.internal"
       containers:
@@ -123,8 +123,8 @@ spec:
         - name: vol-ahnfs-root
           hostPath:
             path: {{ .Values.global.hostPathBase }}
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-host-log
           hostPath:
             path: /var/log
-            type: Directory
+            type: DirectoryOrCreate

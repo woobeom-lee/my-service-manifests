@@ -21,12 +21,12 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-tomcat-auth
       nodeSelector:
-        kubernetes.io/hostname: "cpp-server"
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       hostAliases:
-        - ip: "10.128.88.28"
+        - ip: {{ .Values.global.masterIp | quote }}
           hostnames:
             - "epp-pgbouncer-eppoltp"
             - "epp-postgres-eppoltp"

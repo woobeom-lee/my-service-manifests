@@ -21,7 +21,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-syslog-sender
       nodeSelector:
-        kubernetes.io/hostname: "cpp-server"
+        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
@@ -126,8 +126,8 @@ spec:
         - name: vol-ahnfs-root
           hostPath:
             path: {{ .Values.global.hostPathBase }}
-            type: Directory
+            type: DirectoryOrCreate
         - name: vol-host-log
           hostPath:
             path: /var/log
-            type: Directory
+            type: DirectoryOrCreate

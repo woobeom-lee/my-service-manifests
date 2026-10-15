@@ -45,18 +45,23 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 🔥 핵심 1: 충돌(Crash)을 일으키는 과거 찌꺼기 소켓 파일 무조건 삭제
               find /permanent /tmp /database -name ".s.PGSQL.8819*" -delete 2>/dev/null || true
               find /permanent /tmp /database -name ".s.PGSQL.8817*" -delete 2>/dev/null || true
-              # 안랩 순정 설정 스크립트 실행
               bash /opt/ahnlab/cpp/bin/setting/install_link.sh || true
-              # 🔥 핵심 2: PgBouncer 외부 접속(0.0.0.0) 허용 설정 주입
-              CONF_FILE="/permanent/service/pgbouncer/conf/pgbouncer-cppoltp.cfg"
-              if [ -f "$CONF_FILE" ]; then
-                sed -i 's/^listen_addr.*/listen_addr = 0.0.0.0/g' "$CONF_FILE"
-              fi
-              # 권한 복구 및 도커 소켓 권한 허용
-              chown -R 2500:2500 /opt/ahnlab /permanent /nosql  /tmp /var/log /home /opt/repo /new  || true
+              for CONF_FILE in /permanent/service/pgbouncer/conf/pgbouncer-cppoltp.cfg /opt/ahnlab/cpp/service/pgbouncer/conf/pgbouncer-cppoltp.cfg; do
+                if [ -f "$CONF_FILE" ]; then
+                  sed -i 's/^listen_addr.*/listen_addr = 0.0.0.0/g' "$CONF_FILE"
+                  sed -i 's/^auth_type.*/auth_type = trust/g' "$CONF_FILE"
+                fi
+              done
+              for ULIST in /permanent/service/pgbouncer/conf/userlist.txt /opt/ahnlab/cpp/service/pgbouncer/conf/userlist.txt; do
+                if [ -f "$ULIST" ]; then
+                  grep -q '"eppoltpuser"' "$ULIST" || echo '"eppoltpuser" "qweQWE123!@#"' >> "$ULIST"
+                  grep -q '"cppoltp"' "$ULIST" || echo '"cppoltp" "qweQWE123!@#"' >> "$ULIST"
+                  grep -q '"postgres"' "$ULIST" || echo '"postgres" ""' >> "$ULIST"
+                fi
+              done
+              chown -R 2500:2500 /opt/ahnlab /permanent /nosql /tmp /var/log /home /opt/repo /new || true
               if [ -S /var/run/docker.sock ]; then chmod 666 /var/run/docker.sock; fi
           volumeMounts:
             - name: vol-docker-sock
@@ -110,31 +115,3 @@ spec:
   ports:
     - port: 8819
       targetPort: 8819
----
-# 🔥 핵심 3: Tomcat이 옛날 이름(cpp-)으로 찾아와도 문지기(PgBouncer)로 정상 연결해주는 Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: cpp-pgbouncer-eppoltp
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: ClusterIP
-  selector:
-    app: epp-pgbouncer-eppoltp
-  ports:
-    - port: 8819
-      targetPort: 8819
----
-# 🔥 핵심 4: DB 본체(Postgres)도 옛날 이름(cpp-)으로 정상 연결해주는 Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: cpp-postgres-eppoltp
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: ClusterIP
-  selector:
-    app: epp-postgres-eppoltp
-  ports:
-    - port: 8817
-      targetPort: 8817

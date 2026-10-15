@@ -93,15 +93,17 @@ spec:
                     nohup bash -c '
                       for i in {1..30}; do
                         if psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "ALTER USER eppoltpuser WITH SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || \
-                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "CREATE ROLE eppoltpuser WITH LOGIN SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "CREATE ROLE eppoltpuser WITH LOGIN SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || \
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "ALTER USER eppoltpuser WITH SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || true
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "CREATE ROLE cppoltp WITH LOGIN SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || \
+                          psql -h 127.0.0.1 -p 8817 -U postgres -d postgres -c "ALTER USER cppoltp WITH SUPERUSER PASSWORD '\''qweQWE123!@#'\'';" > /dev/null 2>&1 || true
                           break
                         fi
                         sleep 2
                       done
                       while true; do
                         psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "
-                          UPDATE tb_config SET value = '\''FINISH'\'' WHERE config_group = '\''SYS_LICENSE'\'' AND (key = '\''apply_license_response'\'' OR value = '\''UPDATING'\'') AND value != '\''FINISH'\'';
+                          UPDATE tb_config SET value = '\''FINISH'\'' WHERE config_group = '\''SYS_LICENSE'\'' AND value = '\''UPDATING'\'';
                           UPDATE tb_product_license SET expire_update_status = '\''DONE'\'' WHERE expire_update_status = '\''UPDATING'\'';
                           UPDATE tb_multi_license SET expire_update_status = '\''DONE'\'' WHERE expire_update_status = '\''UPDATING'\'';
                         " > /dev/null 2>&1 || true
