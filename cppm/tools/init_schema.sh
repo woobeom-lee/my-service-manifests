@@ -31,6 +31,7 @@ kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -
 echo "=== [5/5] 라이선스 패치 및 애플리케이션 파드 재시작 ==="
 kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_product_license SET expire_update_status = 'DONE' WHERE expire_update_status = 'UPDATING';"
 kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_multi_license SET expire_update_status = 'DONE' WHERE expire_update_status = 'UPDATING';"
+kubectl exec -i $POD_NAME -n k8s-cppm -c postgres -- psql -h 127.0.0.1 -p 8817 -U postgres -d cppoltp -c "UPDATE tb_config SET value = 'FINISH' WHERE config_group = 'SYS_LICENSE' AND value = 'UPDATING';"
  
 echo "✅ 모든 복원 완료! 죽어있는 앱 파드들을 깨웁니다."
 kubectl delete pods -l 'app in (epp-tomcat-auth, epp-tomcat-agent, tomcat-console, epp-batch-processor, epp-scheduler, epp-syslog-sender)' -n k8s-cppm
