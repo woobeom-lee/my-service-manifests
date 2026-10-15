@@ -15,7 +15,7 @@ data:
   01-extract.sh: |-
     #!/bin/bash
     echo "=== 1. Force Cleaning Kubelet Ghost Directories ==="
-    for BAD_DIR in /nfs/etc/fstab /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/opt/ahnlab/cpp/cmd /nfs/opt/ahnlab/cpp/bin /nfs/opt/ahnlab/cpp/setting /nfs/permanent/clair/sql/clair2x-vuln-db.sql /nfs/permanent/clair/config/config.yaml; do
+    for BAD_DIR in /nfs/etc/crontab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/opt/ahnlab/cpp/cmd /nfs/opt/ahnlab/cpp/bin /nfs/opt/ahnlab/cpp/setting; do
       if [ -d "$BAD_DIR" ] && [ -z "$(ls -A $BAD_DIR 2>/dev/null)" ]; then rm -rf "$BAD_DIR"; fi
     done
     echo "=== 2. Extracting Everything from /tools/cpp_setup.tar ==="
@@ -46,11 +46,14 @@ data:
   02-setup.sh: |-
     #!/bin/bash
     echo "=== 3. Setting up Configs & Mock Docker ==="
-    mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config /nfs/permanent/save
-    for file in /nfs/etc/fstab /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/crontab /nfs/permanent/clair/sql/clair2x-vuln-db.sql /nfs/permanent/clair/config/config.yaml; do
+    mkdir -p /nfs/etc /nfs/permanent/clair/sql /nfs/permanent/clair/config
+    for file in /nfs/etc/sudoers /nfs/etc/login.defs /nfs/etc/crontab /nfs/permanent/clair/sql/clair2x-vuln-db.sql /nfs/permanent/clair/config/config.yaml; do
       if [ ! -f "$file" ]; then touch "$file"; fi
     done
-    mkdir -p /nfs/permanent/log/{console,agent,auth,batch,cli,cluster,cmd,consumer,docker_stats,eureka-gateway,eureka-gateway-access,eureka-server,nginx,scheduler,syslog-sender,watchdog}
+    LOG_XML="/nfs/permanent/etc/config/log4j2.xml"
+    if [ ! -f "$LOG_XML" ]; then
+      echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
+    fi
     rm -rf /nfs/opt/ahnlab/cpp/log
     ln -snf /permanent/log /nfs/opt/ahnlab/cpp/log
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
@@ -69,10 +72,8 @@ data:
       bash "$CERT_SCRIPT" install || true
     fi
     rm -f /nfs/ahnfs /opt/ahnfs
-    echo "=== [K8s Patch 1] Java Storage Path 설정 ==="
-    echo "/permanent" > /nfs/.epp_storage_path
-    echo "/permanent" > /nfs/permanent/save/epp_storage_path
-    echo "/permanent" > /nfs/opt/ahnlab/cpp/.epp_storage_path
+    echo "=== [K8s Patch 1] Java Storage Path 함정 제거 ==="
+    echo "storage=" > /nfs/.epp_storage_path
     echo "=== [K8s Patch 2] Mongo Shard 2, 3 설정 파일 오타 및 포트 충돌 교정 ==="
     cp /nfs/nosql/conf/shardsvr.conf /nfs/nosql/conf/shardsvr2.conf 2>/dev/null || true
     sed -i 's/shardsvr/shardsvr2/g; s/clusterRole: shardsvr2/clusterRole: shardsvr/g; s/replSetName: SHARD1/replSetName: SHARD2/g; s/port: 8824/port: 8826/g' /nfs/nosql/conf/shardsvr2.conf
@@ -109,18 +110,21 @@ data:
     sed -i 's/cpp-mongo-configsvr/epp-mongo-configsvr/g' /nfs/nosql/conf/configsvr*.conf /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/conf/mongos.conf 2>/dev/null || true
     find /nfs/opt/ahnlab/cpp/setting/ /nfs/permanent/ -type f \( -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.xml" -o -name "*.cfg" -o -name "*.conf" \) -exec sed -i 's/cpp-postgres/epp-postgres/g; s/cpp-pgbouncer/epp-pgbouncer/g; s/cpp-redis/epp-redis/g; s/cpp-kafka/epp-kafka/g' {} + 2>/dev/null || true
     echo "=== [K8s Patch 7] PgBouncer 초기화 무적(Trust) 모드 패치 ==="
-    find /nfs/permanent/service/pgbouncer/conf/ -name "*.cfg" -exec sed -i 's/^listen_addr.*/listen_addr = 0.0.0.0/g; s/auth_type = scram-sha-256/auth_type = trust/g; s/auth_type = md5/auth_type = trust/g' {} + 2>/dev/null || true
+    find /nfs/permanent/service/pgbouncer/conf/ -name "*.cfg" -exec sed -i 's/auth_type = scram-sha-256/auth_type = trust/g; s/auth_type = md5/auth_type = trust/g' {} + 2>/dev/null || true
   03-perm.sh: |-
     #!/bin/bash
     echo "=== 5. Enforcing Strict Permissions ==="
     chown -R 2500:2500 /nfs/opt /nfs/permanent /nfs/nosql /nfs/var /nfs/tmp /nfs/home 2>/dev/null || true
-    chmod 755 /nfs/nosql /nfs/nosql/cmd /nfs/nosql/data /nfs/nosql/logs /nfs/nosql/run 2>/dev/null || true
+    echo "=== [K8s Patch 10] NoSQL Permissions & Missing Dirs (Sync 유실 방지) ==="
+    chmod 755 /nfs/nosql 2>/dev/null || true
+    chmod 755 /nfs/nosql/cmd /nfs/nosql/data /nfs/nosql/logs /nfs/nosql/run 2>/dev/null || true
     chmod 750 /nfs/nosql/conf 2>/dev/null || true
     mkdir -p /nfs/nosql/fail_dir /nfs/nosql/save
     chown -R 2500:2500 /nfs/nosql/fail_dir /nfs/nosql/save 2>/dev/null || true
     chmod 755 /nfs/nosql/fail_dir /nfs/nosql/save 2>/dev/null || true
     if ls /nfs/nosql/conf/mongo_key* 1> /dev/null 2>&1; then chmod 400 /nfs/nosql/conf/mongo_key*; fi
     chmod 440 /nfs/etc/sudoers /nfs/etc/login.defs 2>/dev/null || true
+    echo "=== [K8s Patch 8] 리소스 권한 부여 ==="
     chmod -R 755 /nfs/permanent/etc/config 2>/dev/null || true
     chmod 644 /nfs/permanent/etc/config/* 2>/dev/null || true
     chown 2500:2500 /nfs/nosql/conf/shardsvr*.conf /nfs/nosql/cmd/*shardsvr*.sh 2>/dev/null || true
@@ -129,8 +133,13 @@ data:
     chmod 700 /nfs/nosql/data/shardsvr2 /nfs/nosql/data/shardsvr3 2>/dev/null || true
     chown 2500:2500 /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
     chmod +x /nfs/opt/ahnlab/cpp/cmd/epp-xserver.sh 2>/dev/null || true
-    mkdir -p /nfs/database/15/cppoltpdata /nfs/var/run/postgresql 2>/dev/null || true
-    chown -R 26:26 /nfs/database /nfs/var/run/postgresql 2>/dev/null || true
+    echo "=== [K8s Patch 9] Postgres DB 폴더 권한 예외 처리 (UID 26) ==="
+    # 1. 26번 소유권 일괄 적용
+    mkdir -p /nfs/database/15/cppoltpdata 2>/dev/null || true
+    chown -R 26:26 /nfs/database 2>/dev/null || true
+    chown -R 26:26 /nfs/var/run/postgresql 2>/dev/null || true
+    # 2. cmd 스크립트 실행 권한 부여 (755)
     chmod -R 755 /nfs/database/cmd 2>/dev/null || true
+    # 3. 핵심 DB 데이터 폴더 접근 권한 부여 (700)
     chmod 700 /nfs/database/15/cppoltpdata 2>/dev/null || true
     echo "=== NFS INIT COMPLETED SUCCESSFULLY ==="

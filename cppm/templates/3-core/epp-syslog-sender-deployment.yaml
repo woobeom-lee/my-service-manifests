@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: epp-syslog-sender
-  namespace: {{ .Release.Namespace }}
+  namespace: k8s-cppm
   labels:
     app: epp-syslog-sender
 spec:
@@ -21,7 +21,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-syslog-sender
       nodeSelector:
-        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+        kubernetes.io/hostname: "cpp-server"
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
@@ -48,7 +48,7 @@ spec:
             - name: CONTAINER_NAME
               value: "cpp-syslog-sender"
             - name: JAVA_TOOL_OPTIONS
-              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true"
+              value: "-Xms512m -Xmx1024m"
           volumeMounts:
             - name: tmpfs-ahnlab
               mountPath: /opt/ahnlab
@@ -66,7 +66,7 @@ spec:
               subPath: database
             # [원상 복구] 정상적인 호스트 공유 볼륨 사용
             - name: vol-ahnfs-root
-              mountPath: /tmp
+              mountPath: /tmp_host
               subPath: tmp
             - name: vol-ahnfs-root
               mountPath: /home
@@ -125,9 +125,9 @@ spec:
             sizeLimit: 16Mi
         - name: vol-ahnfs-root
           hostPath:
-            path: {{ .Values.global.hostPathBase }}
-            type: DirectoryOrCreate
+            path: /data/ahnfs
+            type: Directory
         - name: vol-host-log
           hostPath:
             path: /var/log
-            type: DirectoryOrCreate
+            type: Directory

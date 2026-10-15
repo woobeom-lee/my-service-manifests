@@ -82,9 +82,9 @@
 - name: vol-ahnfs-root
   hostPath:
     path: {{ .Values.global.ahnfsBasePath }}
-    type: DirectoryOrCreate
+    type: Directory
 - name: vol-host-log
   hostPath:
     path: /var/log
-    type: DirectoryOrCreate
+    type: Directory
 {{- end -}}

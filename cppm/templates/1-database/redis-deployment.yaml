@@ -108,7 +108,7 @@ spec:
         - name: vol-tools
           hostPath:
             path: /home/registry/my-service-manifests/cppm/tools
-            type: DirectoryOrCreate
+            type: Directory
         {{- include "cppm.commonVolumes" . | nindent 8 }}
 ---
 apiVersion: v1

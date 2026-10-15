@@ -10,7 +10,7 @@ spec:
     app: epp-mongo-mongos
   ports:
     - port: 8825
-      targetPort: 8825
+      targetPort: 27017
       protocol: TCP
 ---
 apiVersion: v1

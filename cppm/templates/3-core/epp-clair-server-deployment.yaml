@@ -17,7 +17,7 @@ spec:
     spec:
       # 지정된 노드(cpp-server)에만 파드가 배포되도록 강제
       nodeSelector:
-        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+        kubernetes.io/hostname: "cpp-server"
       containers:
         - name: clair-server
           image: "ghcr.io/woobeom-lee/clair-local-scan:latest"
@@ -40,9 +40,9 @@ spec:
           hostPath:
             # 원본 호스트 서버의 cpp 디렉터리 경로
             path: {{ .Values.global.hostPathBase }}/opt/ahnlab/cpp
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-permanent
           hostPath:
             # 원본 호스트 서버의 permanent 디렉터리 경로
             path: {{ .Values.global.hostPathBase }}/permanent
-            type: DirectoryOrCreate
+            type: Directory

@@ -21,12 +21,12 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostname: cpp-kafka-consumer
       nodeSelector:
-        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+        kubernetes.io/hostname: "cpp-server"
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       hostAliases:
-        - ip: {{ .Values.global.masterIp | quote }}
+        - ip: "10.128.88.28"
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
@@ -92,7 +92,7 @@ spec:
             - name: DOCKER_HOST
               value: "unix:///var/run/docker.sock"
             - name: JAVA_TOOL_OPTIONS
-              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Depp.server.id=1 -Dcluster.node.id=1 -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true -Dspring.kafka.bootstrap-servers=epp-kafka:8816 -Dspring.kafka.consumer.bootstrap-servers=epp-kafka:8816 -Dkafka.broker.list=epp-kafka:8816 -Dspring.kafka.consumer.group-id=cpp-kafka-consumer-group -Dspring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer -Dspring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer"
+              value: "-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Depp.server.id=1 -Dcluster.node.id=1 -Dlogging.config=file:/tmp/debug-logback.xml -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true -Dspring.kafka.bootstrap-servers=epp-kafka:8816 -Dspring.kafka.consumer.bootstrap-servers=epp-kafka:8816 -Dkafka.broker.list=epp-kafka:8816 -Dspring.kafka.consumer.group-id=cpp-kafka-consumer-group -Dspring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer -Dspring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer"
  
           volumeMounts:
             - name: vol-docker-sock
@@ -177,8 +177,8 @@ spec:
         - name: vol-ahnfs-root
           hostPath:
             path: {{ .Values.global.hostPathBase }}
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-host-log
           hostPath:
             path: /var/log
-            type: DirectoryOrCreate
+            type: Directory

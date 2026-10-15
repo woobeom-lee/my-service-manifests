@@ -18,12 +18,12 @@ spec:
         app: epp-cluster-manager
     spec:
       nodeSelector:
-        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+        kubernetes.io/hostname: "cpp-server"
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       hostAliases:
-        - ip: {{ .Values.global.masterIp | quote }}
+        - ip: "10.128.88.28"
           hostnames:
             - "host.docker.internal"
             - "epp-postgres-eppoltp"
@@ -49,7 +49,7 @@ spec:
               echo "Database is ready! Starting cluster-manager..."
       containers:
         - name: epp-cluster-manager
-          image: "{{ .Values.global.imageRegistry }}/cpp-platform:{{ .Values.global.imageTag }}"
+          image: cpp-platform:9-16-25
           imagePullPolicy: IfNotPresent
           command:
             - "/bin/bash"
@@ -97,27 +97,27 @@ spec:
         - name: vol-ahnfs-root
           hostPath:
             path: {{ .Values.global.hostPathBase }}
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-nosql
           hostPath:
             path: {{ .Values.global.hostPathBase }}/nosql
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-database
           hostPath:
             path: {{ .Values.global.hostPathBase }}/database
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-tmp
           hostPath:
             path: {{ .Values.global.hostPathBase }}/tmp
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-home
           hostPath:
             path: {{ .Values.global.hostPathBase }}/home
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-permanent
           hostPath:
             path: {{ .Values.global.hostPathBase }}/permanent
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-docker-sock
           hostPath:
             path: /var/run/docker.sock

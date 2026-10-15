@@ -20,12 +20,12 @@ spec:
       hostname: cpp-server
       subdomain: cpp-server
       nodeSelector:
-        kubernetes.io/hostname: {{ .Values.global.nodeName | quote }}
+        kubernetes.io/hostname: "cpp-server"
       tolerations:
         - operator: "Exists"
           effect: "NoSchedule"
       hostAliases:
-        - ip: {{ .Values.global.masterIp | quote }}
+        - ip: "10.128.88.28"
           hostnames:
             - "epp-postgres-eppoltp"
             - "epp-mgr"
@@ -203,18 +203,18 @@ spec:
         - name: vol-ahnfs-root
           hostPath:
             path: {{ .Values.global.hostPathBase }}
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-host-log
           hostPath:
             path: /var/log
-            type: DirectoryOrCreate
+            type: Directory
         - name: vol-machine-id
           hostPath:
             path: /etc/machine-id
             type: File
         - name: epp-storage-path-vol
           hostPath:
-            path: {{ .Values.global.hostPathBase }}/.epp_storage_path
+            path: /home/k8s/cpp_installer/epp_storage_path
             type: FileOrCreate
  
 ---
