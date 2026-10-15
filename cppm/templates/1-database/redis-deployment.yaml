@@ -95,7 +95,7 @@ spec:
             - name: DOCKER_HOST
               value: "tcp://127.0.0.1:2375"
             - name: JAVA_TOOL_OPTIONS
-              value: "-Xms192m -Xmx192m -Dfile.encoding=UTF-8 -Dlogging.config=file:///permanent/etc/config/log4j2.xml -Dlog4j2.configurationFile=file:///permanent/etc/config/log4j2.xml   -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true  "
+              value: "-Xms192m -Xmx192m -Dfile.encoding=UTF-8   -Depp.storage.path=/permanent -Depp.home=/opt/ahnlab/cpp -Depp.security.key.path=/permanent/etc/config/site.key -Dahnlab.epp.security.skip=true  "
           volumeMounts:
             - name: vol-docker-sock
               mountPath: /var/run/docker.sock

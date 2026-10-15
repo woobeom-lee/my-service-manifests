@@ -55,7 +55,7 @@ data:
       echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24gZGVidWc9ImZhbHNlIj4KICA8YXBwZW5kZXIgbmFtZT0iQ09OU09MRSIgY2xhc3M9ImNoLnFvcy5sb2diYWNrLmNvcmUuQ29uc29sZUFwcGVuZGVyIj4KICAgIDxlbmNvZGVyPgogICAgICA8cGF0dGVybj4lZHt5eXl5LU1NLWRkIEhIOm1tOnNzLlNTU30gWyV0aHJlYWRdICUtNWxldmVsICVsb2dnZXJ7MzZ9IC0gJW1zZyVuPC9wYXR0ZXJuPgogICAgPC9lbmNvZGVyPgogIDwvYXBwZW5kZXI+CiAgPHJvb3QgbGV2ZWw9IklORk8iPgogICAgPGFwcGVuZGVyLXJlZiByZWY9IkNPTlNPTEUiLz4KICA8L3Jvb3Q+CjwvY29uZmlndXJhdGlvbj4=" | base64 -d > "$LOG_XML"
     fi
     rm -rf /nfs/opt/ahnlab/cpp/log
-    mkdir -p /nfs/opt/ahnlab/cpp/log/{cmd,batch-processor,cluster-manager,scheduler,syslog-sender,tomcat-agent,tomcat-console,tomcat-auth,kafka-consumer,eureka-server,eureka-gateway}
+    ln -snf /permanent/log /nfs/opt/ahnlab/cpp/log
     echo "kafka_partition_count=1" > /nfs/permanent/save/kafka_role
     rm -rf /nfs/ahnfs /opt/ahnfs
     ln -snf /nfs /nfs/ahnfs
